@@ -142,73 +142,6 @@ typedef struct {
   bool non_zero_time;
 } problemData;
 
-static PetscErrorCode NS_DENSITY_CURRENT(problemData *problem) {
-
-  PetscFunctionBeginUser;
-  problem->dim                       = 3;
-  problem->qdatasizeVol              = 10;
-  problem->qdatasizeSur              = 4;
-  problem->setupVol                  = Setup;
-  problem->setupVol_loc              = Setup_loc;
-  problem->setupSur                  = SetupBoundary;
-  problem->setupSur_loc              = SetupBoundary_loc;
-  problem->ics                       = ICsDC;
-  problem->ics_loc                   = ICsDC_loc;
-  problem->applyVol_rhs              = DC;
-  problem->applyVol_rhs_loc          = DC_loc;
-  problem->applyVol_ifunction        = IFunction_DC;
-  problem->applyVol_ifunction_loc    = IFunction_DC_loc;
-  problem->bc                        = Exact_DC;
-  problem->non_zero_time             = PETSC_FALSE;
-  PetscFunctionReturn(0);
-}
-
-static PetscErrorCode NS_ADVECTION(problemData *problem) {
-
-  PetscFunctionBeginUser;
-  problem->dim                       = 3;
-  problem->qdatasizeVol              = 10;
-  problem->qdatasizeSur              = 4;
-  problem->setupVol                  = Setup;
-  problem->setupVol_loc              = Setup_loc;
-  problem->setupSur                  = SetupBoundary;
-  problem->setupSur_loc              = SetupBoundary_loc;
-  problem->ics                       = ICsAdvection;
-  problem->ics_loc                   = ICsAdvection_loc;
-  problem->applyVol_rhs              = Advection;
-  problem->applyVol_rhs_loc          = Advection_loc;
-  problem->applyVol_ifunction        = IFunction_Advection;
-  problem->applyVol_ifunction_loc    = IFunction_Advection_loc;
-  problem->applySur                  = Advection_Sur;
-  problem->applySur_loc              = Advection_Sur_loc;
-  problem->bc                        = Exact_Advection;
-  problem->non_zero_time             = PETSC_FALSE;
-  PetscFunctionReturn(0);
-}
-
-static PetscErrorCode NS_ADVECTION2D(problemData *problem) {
-
-  PetscFunctionBeginUser;
-  problem->dim                       = 2;
-  problem->qdatasizeVol              = 5;
-  problem->qdatasizeSur              = 3;
-  problem->setupVol                  = Setup2d;
-  problem->setupVol_loc              = Setup2d_loc;
-  problem->setupSur                  = SetupBoundary2d;
-  problem->setupSur_loc              = SetupBoundary2d_loc;
-  problem->ics                       = ICsAdvection2d;
-  problem->ics_loc                   = ICsAdvection2d_loc;
-  problem->applyVol_rhs              = Advection2d;
-  problem->applyVol_rhs_loc          = Advection2d_loc;
-  problem->applyVol_ifunction        = IFunction_Advection2d;
-  problem->applyVol_ifunction_loc    = IFunction_Advection2d_loc;
-  problem->applySur                  = Advection2d_Sur;
-  problem->applySur_loc              = Advection2d_Sur_loc;
-  problem->bc                        = Exact_Advection2d;
-  problem->non_zero_time             = PETSC_TRUE;
-  PetscFunctionReturn(0);
-}
-
 // PETSc user data
 typedef struct User_ *User;
 typedef struct Units_ *Units;
@@ -223,9 +156,12 @@ struct User_ {
   Units units;
   CeedVector qceed, qdotceed, gceed;
   CeedOperator op_rhs_vol, op_rhs, op_ifunction_vol, op_ifunction;
+  CeedQFunctionContext ctxSetup, ctxDC, ctxAdvection;
   Vec M;
   char outputfolder[PETSC_MAX_PATH_LEN];
   PetscInt contsteps;
+  DCContext ctxDCData;
+  AdvectionContext ctxAdvectionData;
 };
 
 struct Units_ {
@@ -251,6 +187,171 @@ struct SimpleBC_ {
   PetscInt walls[6], slips[3][6];
   PetscBool userbc;
 };
+
+static PetscErrorCode NS_DENSITY_CURRENT(problemData *problem, void *userData) {
+
+  MPI_Comm comm = PETSC_COMM_WORLD;
+  PetscErrorCode ierr;
+  User user = *(User *)userData;
+
+  // Units
+  PetscScalar meter      = 1e-2;     // 1 meter in scaled length units
+  PetscScalar second     = 1e-2;     // 1 second in scaled time units
+  PetscScalar kilogram   = 1e-6;     // 1 kilogram in scaled mass units
+  PetscScalar Kelvin     = 1;        // 1 Kelvin in scaled temperature units
+  PetscScalar WpermK, Pascal;
+
+  // ctxDCData struct
+  CeedScalar lambda      = -2./3.;   // -
+  CeedScalar mu          = 75.;      // Pa s, dynamic viscosity
+  // mu = 75 is not physical for air, but is good for numerical stability
+  CeedScalar k           = 0.02638;  // W/(m K)
+
+  PetscFunctionBeginUser;
+  problem->dim                    = 3;
+  problem->qdatasizeVol           = 10;
+  problem->qdatasizeSur           = 4;
+  problem->setupVol               = Setup;
+  problem->setupVol_loc           = Setup_loc;
+  problem->setupSur               = SetupBoundary;
+  problem->setupSur_loc           = SetupBoundary_loc;
+  problem->ics                    = ICsDC;
+  problem->ics_loc                = ICsDC_loc;
+  problem->applyVol_rhs           = DC;
+  problem->applyVol_rhs_loc       = DC_loc;
+  problem->applyVol_ifunction     = IFunction_DC;
+  problem->applyVol_ifunction_loc = IFunction_DC_loc;
+  problem->bc                     = Exact_DC;
+  problem->non_zero_time          = PETSC_FALSE;
+  // Parse command line options
+  ierr = PetscOptionsBegin(comm, NULL, "Options for density current", NULL);
+         CHKERRQ(ierr);
+    ierr = PetscOptionsScalar("-lambda",
+                              "Stokes hypothesis second viscosity coefficient",
+                              NULL, lambda, &lambda, NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsScalar("-mu", "Shear dynamic viscosity coefficient",
+                              NULL, mu, &mu, NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsScalar("-k", "Thermal conductivity",
+                              NULL, k, &k, NULL); CHKERRQ(ierr);
+  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+
+  // Define derived units
+  Pascal = kilogram / (meter * PetscSqr(second));
+  WpermK = kilogram * meter / (pow(second,3) * Kelvin);
+
+  // Scale variables to desired units
+  mu *= Pascal * second;
+  k *= WpermK;
+
+  // Set up ctxDCData struct
+  user->ctxDCData->lambda = lambda;
+  user->ctxDCData->mu = mu;
+  user->ctxDCData->k = k;
+
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode NS_ADVECTION(problemData *problem, void *userData) {
+
+  MPI_Comm comm = PETSC_COMM_WORLD;
+  PetscErrorCode ierr;
+  User user = *(User *)userData;
+
+  // ctxAdvectionData struct
+  CeedScalar CtauS       = 0.;       // dimensionless
+  CeedScalar strong_form = 0.;       // [0,1]
+  CeedScalar E_wind      = 1.e6;     // J
+
+  PetscFunctionBeginUser;
+  problem->dim                    = 3;
+  problem->qdatasizeVol           = 10;
+  problem->qdatasizeSur           = 4;
+  problem->setupVol               = Setup;
+  problem->setupVol_loc           = Setup_loc;
+  problem->setupSur               = SetupBoundary;
+  problem->setupSur_loc           = SetupBoundary_loc;
+  problem->ics                    = ICsAdvection;
+  problem->ics_loc                = ICsAdvection_loc;
+  problem->applyVol_rhs           = Advection;
+  problem->applyVol_rhs_loc       = Advection_loc;
+  problem->applyVol_ifunction     = IFunction_Advection;
+  problem->applyVol_ifunction_loc = IFunction_Advection_loc;
+  problem->applySur               = Advection_Sur;
+  problem->applySur_loc           = Advection_Sur_loc;
+  problem->bc                     = Exact_Advection;
+  problem->non_zero_time          = PETSC_FALSE;
+  // Parse command line options
+  ierr = PetscOptionsBegin(comm, NULL, "Options for advection", NULL);
+         CHKERRQ(ierr);
+    ierr = PetscOptionsScalar("-CtauS",
+                              "Scale coefficient for tau (nondimensional)",
+                              NULL, CtauS, &CtauS, NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsScalar("-strong_form",
+                              "Strong (1) or weak/integrated by parts (0) advection residual",
+                              NULL, strong_form, &strong_form, NULL);
+                              CHKERRQ(ierr);
+    ierr = PetscOptionsScalar("-E_wind", "Total energy of inflow wind",
+                              NULL, E_wind, &E_wind, NULL); CHKERRQ(ierr);
+  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+
+  // Set up ctxAdvectionData struct
+  user->ctxAdvectionData->CtauS = CtauS;
+  user->ctxAdvectionData->strong_form = strong_form;
+  user->ctxAdvectionData->E_wind = E_wind;
+
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode NS_ADVECTION2D(problemData *problem, void *userData) {
+
+  MPI_Comm comm = PETSC_COMM_WORLD;
+  PetscErrorCode ierr;
+  User user = *(User *)userData;
+
+  // ctxAdvectionData struct
+  CeedScalar CtauS       = 0.;       // dimensionless
+  CeedScalar strong_form = 0.;       // [0,1]
+  CeedScalar E_wind      = 1.e6;     // J
+
+  PetscFunctionBeginUser;
+  problem->dim                    = 2;
+  problem->qdatasizeVol           = 5;
+  problem->qdatasizeSur           = 3;
+  problem->setupVol               = Setup2d;
+  problem->setupVol_loc           = Setup2d_loc;
+  problem->setupSur               = SetupBoundary2d;
+  problem->setupSur_loc           = SetupBoundary2d_loc;
+  problem->ics                    = ICsAdvection2d;
+  problem->ics_loc                = ICsAdvection2d_loc;
+  problem->applyVol_rhs           = Advection2d;
+  problem->applyVol_rhs_loc       = Advection2d_loc;
+  problem->applyVol_ifunction     = IFunction_Advection2d;
+  problem->applyVol_ifunction_loc = IFunction_Advection2d_loc;
+  problem->applySur               = Advection2d_Sur;
+  problem->applySur_loc           = Advection2d_Sur_loc;
+  problem->bc                     = Exact_Advection2d;
+  problem->non_zero_time          = PETSC_TRUE;
+  // Parse command line options
+  ierr = PetscOptionsBegin(comm, NULL, "Options for advection2d", NULL);
+         CHKERRQ(ierr);
+    ierr = PetscOptionsScalar("-CtauS",
+                              "Scale coefficient for tau (nondimensional)",
+                              NULL, CtauS, &CtauS, NULL); CHKERRQ(ierr);
+    ierr = PetscOptionsScalar("-strong_form",
+                              "Strong (1) or weak/integrated by parts (0) advection residual",
+                              NULL, strong_form, &strong_form, NULL);
+                              CHKERRQ(ierr);
+    ierr = PetscOptionsScalar("-E_wind", "Total energy of inflow wind",
+                              NULL, E_wind, &E_wind, NULL); CHKERRQ(ierr);
+  ierr = PetscOptionsEnd(); CHKERRQ(ierr);
+
+  // Set up ctxAdvectionData struct
+  user->ctxAdvectionData->CtauS = CtauS;
+  user->ctxAdvectionData->strong_form = strong_form;
+  user->ctxAdvectionData->E_wind = E_wind;
+
+  PetscFunctionReturn(0);
+}
 
 // Essential BC dofs are encoded in closure indices as -(i+1).
 static PetscInt Involute(PetscInt i) {
@@ -826,7 +927,6 @@ static PetscErrorCode SetUpDM(DM dm, problemData *problem, PetscInt degree,
               SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG,
                        "Boundary condition already set on face %D!\n",
                        bc->walls[w]);
-
           }
         }
       }
@@ -881,6 +981,8 @@ int main(int argc, char **argv) {
   TSAdapt adapt;
   User user;
   Units units;
+  DCContext ctxDCData;
+  AdvectionContext ctxAdvectionData;
   char ceedresource[4096] = "/cpu/self", problemName[] = "density_current";
   PetscFunctionList problems = NULL;
   PetscInt localNelemVol, lnodes, gnodes, steps;
@@ -894,7 +996,6 @@ int main(int argc, char **argv) {
   CeedBasis basisx, basisxc, basisq;
   CeedElemRestriction restrictx, restrictq, restrictqdi;
   CeedQFunction qf_setupVol, qf_ics, qf_rhsVol, qf_ifunctionVol;
-  CeedQFunctionContext ctxSetup, ctxNS, ctxAdvection2d, ctxSurface;
   CeedOperator op_setupVol, op_ics;
   CeedScalar Rd;
   CeedMemType memtyperequested;
@@ -930,17 +1031,10 @@ int main(int argc, char **argv) {
   CeedScalar theta0      = 300.;     // K
   CeedScalar thetaC      = -15.;     // K
   CeedScalar P0          = 1.e5;     // Pa
-  CeedScalar E_wind      = 1.e6;     // J
   CeedScalar N           = 0.01;     // 1/s
   CeedScalar cv          = 717.;     // J/(kg K)
   CeedScalar cp          = 1004.;    // J/(kg K)
   CeedScalar g           = 9.81;     // m/s^2
-  CeedScalar lambda      = -2./3.;   // -
-  CeedScalar mu          = 75.;      // Pa s, dynamic viscosity
-  // mu = 75 is not physical for air, but is good for numerical stability
-  CeedScalar k           = 0.02638;  // W/(m K)
-  CeedScalar CtauS       = 0.;       // dimensionless
-  CeedScalar strong_form = 0.;       // [0,1]
   PetscScalar lx         = 8000.;    // m
   PetscScalar ly         = 8000.;    // m
   PetscScalar lz         = 4000.;    // m
@@ -962,6 +1056,8 @@ int main(int argc, char **argv) {
   ierr = PetscCalloc1(1, &user); CHKERRQ(ierr);
   ierr = PetscMalloc1(1, &units); CHKERRQ(ierr);
   ierr = PetscCalloc1(1, &problem); CHKERRQ(ierr);
+  ierr = PetscCalloc1(1, &ctxDCData); CHKERRQ(ierr);
+  ierr = PetscCalloc1(1, &ctxAdvectionData); CHKERRQ(ierr);
 
   // Register problems to be available on the command line
   ierr = PetscFunctionListAdd(&problems, "density_current", NS_DENSITY_CURRENT);
@@ -1072,8 +1168,6 @@ int main(int argc, char **argv) {
                             NULL, thetaC, &thetaC, NULL); CHKERRQ(ierr);
   ierr = PetscOptionsScalar("-P0", "Atmospheric pressure",
                             NULL, P0, &P0, NULL); CHKERRQ(ierr);
-  ierr = PetscOptionsScalar("-E_wind", "Total energy of inflow wind",
-                            NULL, E_wind, &E_wind, NULL); CHKERRQ(ierr);
   ierr = PetscOptionsScalar("-N", "Brunt-Vaisala frequency",
                             NULL, N, &N, NULL); CHKERRQ(ierr);
   ierr = PetscOptionsScalar("-cv", "Heat capacity at constant volume",
@@ -1082,30 +1176,16 @@ int main(int argc, char **argv) {
                             NULL, cp, &cp, NULL); CHKERRQ(ierr);
   ierr = PetscOptionsScalar("-g", "Gravitational acceleration",
                             NULL, g, &g, NULL); CHKERRQ(ierr);
-  ierr = PetscOptionsScalar("-lambda",
-                            "Stokes hypothesis second viscosity coefficient",
-                            NULL, lambda, &lambda, NULL); CHKERRQ(ierr);
-  ierr = PetscOptionsScalar("-mu", "Shear dynamic viscosity coefficient",
-                            NULL, mu, &mu, NULL); CHKERRQ(ierr);
-  ierr = PetscOptionsScalar("-k", "Thermal conductivity",
-                            NULL, k, &k, NULL); CHKERRQ(ierr);
-  ierr = PetscOptionsScalar("-CtauS",
-                            "Scale coefficient for tau (nondimensional)",
-                            NULL, CtauS, &CtauS, NULL); CHKERRQ(ierr);
-  if (stab == STAB_NONE && CtauS != 0) {
-    ierr = PetscPrintf(comm,
-                       "Warning! Use -CtauS only with -stab su or -stab supg\n");
-    CHKERRQ(ierr);
-  }
-  ierr = PetscOptionsScalar("-strong_form",
-                            "Strong (1) or weak/integrated by parts (0) advection residual",
-                            NULL, strong_form, &strong_form, NULL);
-  CHKERRQ(ierr);
-  if (strcmp(problemName, "density_current") == 0 && (CtauS != 0 || strong_form != 0)) {
-    ierr = PetscPrintf(comm,
-                       "Warning! Problem density_current does not support -CtauS or -strong_form\n");
-    CHKERRQ(ierr);
-  }
+  //if (stab == STAB_NONE && CtauS != 0) {
+  //  ierr = PetscPrintf(comm,
+  //                     "Warning! Use -CtauS only with -stab su or -stab supg\n");
+  //  CHKERRQ(ierr);
+  //}
+  //if (strcmp(problemName, "density_current") == 0 && (CtauS != 0 || strong_form != 0)) {
+  //  ierr = PetscPrintf(comm,
+  //                     "Warning! Problem density_current does not support -CtauS or -strong_form\n");
+  //  CHKERRQ(ierr);
+  //}
   ierr = PetscOptionsScalar("-lx", "Length scale in x direction",
                             NULL, lx, &lx, NULL); CHKERRQ(ierr);
   ierr = PetscOptionsScalar("-ly", "Length scale in y direction",
@@ -1183,14 +1263,12 @@ int main(int argc, char **argv) {
   theta0 *= Kelvin;
   thetaC *= Kelvin;
   P0 *= Pascal;
-  E_wind *= Joule;
+  //E_wind *= Joule;
   N *= (1./second);
   cv *= JperkgK;
   cp *= JperkgK;
   Rd = cp - cv;
   g *= mpersquareds;
-  mu *= Pascal * second;
-  k *= WpermK;
   lx = fabs(lx) * meter;
   ly = fabs(ly) * meter;
   lz = fabs(lz) * meter;
@@ -1523,42 +1601,40 @@ int main(int argc, char **argv) {
                                    NqptsSur, basisxSur, basisqSur,
                                    &user->op_ifunction); CHKERRQ(ierr);
   // Set up contex for QFunctions
-  CeedQFunctionContextCreate(ceed, &ctxSetup);
-  CeedQFunctionContextSetData(ctxSetup, CEED_MEM_HOST, CEED_USE_POINTER,
+  CeedQFunctionContextCreate(ceed, &user->ctxSetup);
+  CeedQFunctionContextSetData(user->ctxSetup, CEED_MEM_HOST, CEED_USE_POINTER,
                               sizeof ctxSetupData, &ctxSetupData);
-  CeedQFunctionSetContext(qf_ics, ctxSetup);
+  CeedQFunctionSetContext(qf_ics, user->ctxSetup);
 
-  CeedScalar ctxNSData[8] = {lambda, mu, k, cv, cp, g, Rd};
-  CeedQFunctionContextCreate(ceed, &ctxNS);
-  CeedQFunctionContextSetData(ctxNS, CEED_MEM_HOST, CEED_USE_POINTER,
-                              sizeof ctxNSData, &ctxNSData);
+  // Set up remaining ctxDCData structure
+  ctxDCData->cv = cv;
+  ctxDCData->cp = cp;
+  ctxDCData->g = g;
+  ctxDCData->Rd = Rd;
+  ctxDCData->stabilization = stab;
+  user->ctxDCData = ctxDCData;
 
-  struct Advection2dContext_ ctxAdvection2dData = {
-    .CtauS = CtauS,
-    .strong_form = strong_form,
-    .stabilization = stab,
-  };
-  CeedQFunctionContextCreate(ceed, &ctxAdvection2d);
-  CeedQFunctionContextSetData(ctxAdvection2d, CEED_MEM_HOST, CEED_USE_POINTER,
-                              sizeof ctxAdvection2dData, &ctxAdvection2dData);
+  CeedQFunctionContextCreate(ceed, &user->ctxDC);
+  CeedQFunctionContextSetData(user->ctxDC, CEED_MEM_HOST, CEED_USE_POINTER,
+                              sizeof *ctxDCData, ctxDCData);
 
-  struct SurfaceContext_ ctxSurfaceData = {
-    .E_wind = E_wind,
-    .strong_form = strong_form,
-    .implicit = implicit,
-  };
-  CeedQFunctionContextCreate(ceed, &ctxSurface);
-  CeedQFunctionContextSetData(ctxSurface, CEED_MEM_HOST, CEED_USE_POINTER,
-                              sizeof ctxSurfaceData, &ctxSurfaceData);
+  // Set up ctxAdvectionData context
+  ctxAdvectionData->stabilization = stab;
+  ctxAdvectionData->implicit = implicit;
+  user->ctxAdvectionData = ctxAdvectionData;
+
+  CeedQFunctionContextCreate(ceed, &user->ctxAdvection);
+  CeedQFunctionContextSetData(user->ctxAdvection, CEED_MEM_HOST, CEED_USE_POINTER,
+                              sizeof *ctxAdvectionData, ctxAdvectionData);
 
   if (strcmp(problemName, "density_current") == 0) {
-    if (qf_rhsVol) CeedQFunctionSetContext(qf_rhsVol, ctxNS);
-    if (qf_ifunctionVol) CeedQFunctionSetContext(qf_ifunctionVol, ctxNS);
+    if (qf_rhsVol) CeedQFunctionSetContext(qf_rhsVol, user->ctxDC);
+    if (qf_ifunctionVol) CeedQFunctionSetContext(qf_ifunctionVol, user->ctxDC);
   } else if (strcmp(problemName, "advection") == 0
              || strcmp(problemName, "advection2d") == 0) {
-    if (qf_rhsVol) CeedQFunctionSetContext(qf_rhsVol, ctxAdvection2d);
-    if (qf_ifunctionVol) CeedQFunctionSetContext(qf_ifunctionVol, ctxAdvection2d);
-    if (qf_applySur) CeedQFunctionSetContext(qf_applySur, ctxSurface);
+    if (qf_rhsVol) CeedQFunctionSetContext(qf_rhsVol, user->ctxAdvection);
+    if (qf_ifunctionVol) CeedQFunctionSetContext(qf_ifunctionVol, user->ctxAdvection);
+    if (qf_applySur) CeedQFunctionSetContext(qf_applySur, user->ctxAdvection);
   }
 
   // Set up PETSc context
@@ -1599,7 +1675,7 @@ int main(int argc, char **argv) {
                                  user->M); CHKERRQ(ierr);
 
   ierr = ICs_FixMultiplicity(op_ics, xcorners, q0ceed, dm, Qloc, Q, restrictq,
-                             ctxSetup, 0.0); CHKERRQ(ierr);
+                             user->ctxSetup, 0.0); CHKERRQ(ierr);
   if (1) { // Record boundary values from initial condition and override DMPlexInsertBoundaryValues()
     // We use this for the main simulation DM because the reference DMPlexInsertBoundaryValues() is very slow.  If we
     // disable this, we should still get the same results due to the problem->bc function, but with potentially much
@@ -1705,7 +1781,7 @@ int main(int argc, char **argv) {
     ierr = VecGetSize(Qexactloc, &lnodes); CHKERRQ(ierr);
 
     ierr = ICs_FixMultiplicity(op_ics, xcorners, q0ceed, dm, Qexactloc, Qexact,
-                               restrictq, ctxSetup, ftime); CHKERRQ(ierr);
+                               restrictq, user->ctxSetup, ftime); CHKERRQ(ierr);
 
     ierr = VecAXPY(Q, -1.0, Qexact);  CHKERRQ(ierr);
     ierr = VecNorm(Q, NORM_MAX, &norm); CHKERRQ(ierr);
@@ -1771,10 +1847,9 @@ int main(int argc, char **argv) {
   CeedQFunctionDestroy(&qf_ics);
   CeedQFunctionDestroy(&qf_rhsVol);
   CeedQFunctionDestroy(&qf_ifunctionVol);
-  CeedQFunctionContextDestroy(&ctxSetup);
-  CeedQFunctionContextDestroy(&ctxNS);
-  CeedQFunctionContextDestroy(&ctxAdvection2d);
-  CeedQFunctionContextDestroy(&ctxSurface);
+  CeedQFunctionContextDestroy(&user->ctxSetup);
+  CeedQFunctionContextDestroy(&user->ctxDC);
+  CeedQFunctionContextDestroy(&user->ctxAdvection);
   CeedOperatorDestroy(&op_setupVol);
   CeedOperatorDestroy(&op_ics);
   CeedOperatorDestroy(&user->op_rhs_vol);

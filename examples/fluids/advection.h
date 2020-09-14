@@ -50,21 +50,13 @@ struct SetupContext_ {
 
 #ifndef advection_context_struct
 #define advection_context_struct
-typedef struct DCContext_ *DCContext;
-struct DCContext_ {
+typedef struct AdvectionContext_ *AdvectionContext;
+struct AdvectionContext_ {
   CeedScalar CtauS;
   CeedScalar strong_form;
-  int stabilization; // See StabilizationType: 0=none, 1=SU, 2=SUPG
-};
-#endif
-
-#ifndef surface_context_struct
-#define surface_context_struct
-typedef struct SurfaceContext_ *SurfaceContext;
-struct SurfaceContext_ {
   CeedScalar E_wind;
-  CeedScalar strong_form;
-  bool implicit;
+  int stabilization; // See StabilizationType: 0=none, 1=SU, 2=SUPG
+  PetscBool implicit;
 };
 #endif
 
@@ -122,6 +114,7 @@ struct SurfaceContext_ {
 static inline int Exact_Advection(CeedInt dim, CeedScalar time,
                                   const CeedScalar X[], CeedInt Nf,
                                   CeedScalar q[], void *ctx) {
+  // Context
   const SetupContext context = (SetupContext)ctx;
   const CeedScalar rc = context->rc;
   const CeedScalar lx = context->lx;
@@ -244,7 +237,7 @@ CEED_QFUNCTION(Advection)(void *ctx, CeedInt Q,
   // *INDENT-ON*
 
   // Context
-  DCContext context = (DCContext)ctx;
+  AdvectionContext context = (AdvectionContext)ctx;
   const CeedScalar CtauS = context->CtauS;
   const CeedScalar strong_form = context->strong_form;
 
@@ -367,7 +360,9 @@ CEED_QFUNCTION(IFunction_Advection)(void *ctx, CeedInt Q,
   CeedScalar (*v)[CEED_Q_VLA] = (CeedScalar(*)[CEED_Q_VLA])out[0],
              (*dv)[5][CEED_Q_VLA] = (CeedScalar(*)[5][CEED_Q_VLA])out[1];
   // *INDENT-ON*
-  DCContext context = (DCContext)ctx;
+
+  // Context
+  AdvectionContext context = (AdvectionContext)ctx;
   const CeedScalar CtauS = context->CtauS;
   const CeedScalar strong_form = context->strong_form;
 
@@ -420,12 +415,11 @@ CEED_QFUNCTION(IFunction_Advection)(void *ctx, CeedInt Q,
                                    };
     // *INDENT-ON*
 
-// Note with the order that du was filled and the order that dXdx was filled
-//   du[j][k]= du_j / dX_K    (note cap K to be clear this is u_{j,xi_k} )
-//   dXdx[k][j] = dX_K / dx_j
-//   X_K=Kth reference element coordinate (note cap X and K instead of xi_k}
-//   x_j and u_j are jth  physical position and velocity components
-
+    // Note with the order that du was filled and the order that dXdx was filled
+    //   du[j][k]= du_j / dX_K    (note cap K to be clear this is u_{j,xi_k} )
+    //   dXdx[k][j] = dX_K / dx_j
+    //   X_K=Kth reference element coordinate (note cap X and K instead of xi_k}
+    //   x_j and u_j are jth  physical position and velocity components
 
     // The Physics
 
@@ -509,7 +503,9 @@ CEED_QFUNCTION(Advection_Sur)(void *ctx, CeedInt Q,
   // Outputs
   CeedScalar (*v)[CEED_Q_VLA] = (CeedScalar(*)[CEED_Q_VLA])out[0];
   // *INDENT-ON*
-  SurfaceContext context = (SurfaceContext)ctx;
+
+  // Context
+  AdvectionContext context = (AdvectionContext)ctx;
   const CeedScalar E_wind = context->E_wind;
   const CeedScalar strong_form = context->strong_form;
   const bool implicit = context->implicit;
