@@ -121,7 +121,8 @@ jobs:
      script:
        - julia --project -e 'import Pkg; Pkg.build(); Pkg.test("libCEED"; coverage=true)'
      after_success:
-       - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
+       - cd ../..
+       - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder("julia/libCEED.jl"))'
 
 install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
