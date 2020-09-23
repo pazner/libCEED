@@ -83,6 +83,9 @@ using Test, libCEED, LinearAlgebra, StaticArrays
             V = zeros(dim*(dim+1)÷2)
             setvoigt!(V, J, D)
             @test V == setvoigt(J,D)
+            J2 = zeros(dim,dim)
+            getvoigt!(J2, V, D)
+            @test J2 == J
         end
     end
 end
