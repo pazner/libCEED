@@ -276,9 +276,8 @@ function witharray(f, v::CeedVector, mtype::MemType=MEM_HOST)
     arr_ref = Ref{Ptr{C.CeedScalar}}()
     C.CeedVectorGetArray(v[], mtype, arr_ref)
     arr = UnsafeArray(arr_ref[], (length(v),))
-    local res
-    try
-        res = f(arr)
+    res = try
+        f(arr)
     finally
         C.CeedVectorRestoreArray(v[], arr_ref)
     end
@@ -301,9 +300,8 @@ function witharray_read(f, v::CeedVector, mtype::MemType=MEM_HOST)
     arr_ref = Ref{Ptr{C.CeedScalar}}()
     C.CeedVectorGetArrayRead(v[], mtype, arr_ref)
     arr = UnsafeArray(arr_ref[], (length(v),))
-    local res
-    try
-        res = f(arr)
+    res = try
+        f(arr)
     finally
         C.CeedVectorRestoreArrayRead(v[], arr_ref)
     end

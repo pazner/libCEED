@@ -8,6 +8,25 @@ using Test, libCEED, LinearAlgebra, StaticArrays
         @test getresource(c) == res
         @test !iscuda(c)
         @test get_preferred_memtype(c) == MEM_HOST
+
+        io = IOBuffer()
+        show(io, MIME("text/plain"), c)
+        @test String(take!(io)) == """
+            Ceed
+              Ceed Resource: $res
+              Preferred MemType: host"""
+    end
+
+    @testset "Context" begin
+        c = Ceed()
+        data = zeros(3)
+        ctx = Context(c, data)
+        io = IOBuffer()
+        show(io, MIME("text/plain"), ctx)
+        @test String(take!(io)) == """
+            CeedQFunctionContext
+              Context Data Size: $(sizeof(data))"""
+        @test_throws Exception set_data!(ctx, MEM_HOST, OWN_POINTER, data)
     end
 
     @testset "CeedVector" begin
@@ -16,6 +35,8 @@ using Test, libCEED, LinearAlgebra, StaticArrays
         v = CeedVector(c, n)
         @test length(v) == n
         @test axes(v) == (1:n,)
+        @test ndims(v) == 1
+        @test ndims(CeedVector) == 1
 
         v[] = 0.0
         @test @witharray(a=v, all(a .== 0.0))
