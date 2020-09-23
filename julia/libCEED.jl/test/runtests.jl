@@ -39,23 +39,23 @@ using Test, libCEED, LinearAlgebra, StaticArrays
         @test ndims(CeedVector) == 1
 
         v[] = 0.0
-        @test @witharray(a=v, all(a .== 0.0))
+        @test @witharray(a = v, all(a .== 0.0))
 
         v1 = rand(n)
         v2 = CeedVector(c, v1)
-        @test @witharray_read(a=v2, mtype=MEM_HOST, a == v1)
+        @test @witharray_read(a = v2, mtype = MEM_HOST, a == v1)
         @test Vector(v2) == v1
         v[] = v1
-        for p ∈ [1,2,Inf]
-            @test norm(v,p) ≈ norm(v1,p)
+        for p ∈ [1, 2, Inf]
+            @test norm(v, p) ≈ norm(v1, p)
         end
-        @test_throws Exception norm(v,3)
+        @test_throws Exception norm(v, 3)
         @test witharray_read(sum, v) == sum(v1)
         reciprocal!(v)
-        @test @witharray(a=v, mtype=MEM_HOST, all(a .== 1.0./v1))
+        @test @witharray(a = v, mtype = MEM_HOST, all(a .== 1.0 ./ v1))
 
         witharray(x -> x .= 1.0, v)
-        @test @witharray(a=v, all(a .== 1.0))
+        @test @witharray(a = v, all(a .== 1.0))
 
         @test CeedVectorActive()[] == libCEED.C.CEED_VECTOR_ACTIVE[]
         @test CeedVectorNone()[] == libCEED.C.CEED_VECTOR_NONE[]
@@ -79,11 +79,11 @@ using Test, libCEED, LinearAlgebra, StaticArrays
 
         q1d, w1d = lobatto_quadrature(3, AbscissaAndWeights)
         @test q1d ≈ [-1.0, 0.0, 1.0]
-        @test w1d ≈ [1/3, 4/3, 1/3]
+        @test w1d ≈ [1 / 3, 4 / 3, 1 / 3]
 
         q1d, w1d = gauss_quadrature(3)
-        @test q1d ≈ [-sqrt(3/5), 0.0, sqrt(3/5)]
-        @test w1d ≈ [5/9, 8/9, 5/9]
+        @test q1d ≈ [-sqrt(3 / 5), 0.0, sqrt(3 / 5)]
+        @test w1d ≈ [5 / 9, 8 / 9, 5 / 9]
 
         @test BasisCollocated()[] == libCEED.C.CEED_BASIS_COLLOCATED[]
     end
@@ -94,17 +94,17 @@ using Test, libCEED, LinearAlgebra, StaticArrays
     end
 
     @testset "Misc" begin
-        for dim=1:3
+        for dim = 1:3
             D = CeedDim(dim)
-            J = rand(dim,dim)
-            @test det(J,D) ≈ det(J)
+            J = rand(dim, dim)
+            @test det(J, D) ≈ det(J)
             J = J + J' # make symmetric
-            @test setvoigt(SMatrix{dim,dim}(J)) == setvoigt(J,D)
-            @test getvoigt(setvoigt(J,D),D) == J
-            V = zeros(dim*(dim+1)÷2)
+            @test setvoigt(SMatrix{dim,dim}(J)) == setvoigt(J, D)
+            @test getvoigt(setvoigt(J, D), D) == J
+            V = zeros(dim * (dim + 1) ÷ 2)
             setvoigt!(V, J, D)
-            @test V == setvoigt(J,D)
-            J2 = zeros(dim,dim)
+            @test V == setvoigt(J, D)
+            J2 = zeros(dim, dim)
             getvoigt!(J2, V, D)
             @test J2 == J
         end
