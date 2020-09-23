@@ -6,30 +6,107 @@ using CUDA, StaticArrays, UnsafeArrays
 include("C.jl")
 import .C
 
-# types and functions
-export CeedScalar, CeedInt
-export Ceed, getresource, isdeterministic, iscuda, get_preferred_memtype
-export Basis, BasisCollocated, create_tensor_h1_lagrange_basis, create_tensor_h1_basis, create_h1_basis, apply!, apply, getdimension, gettopology, getnumcomponents, getnumnodes, getnumnodes1d, getnumqpts, getnumqpts1d
-export ElemRestriction, ElemRestrictionNone, create_elem_restriction, create_elem_restriction_strided
-export CeedVector, CeedVectorActive, CeedVectorNone, setvalue!, reciprocal!, witharray, witharray_read, @witharray, @witharray_read, setarray!, sync_array!, take_array!, norm
-export gauss_quadrature, lobatto_quadrature, Abscissa, AbscissaAndWeights
-export UserQFunction, QFunction, QFunctionNone, create_interior_qfunction, create_identity_qfunction, add_input!, add_output!, set_context!, apply!
-export extract_context, extract_array, @interior_qf
-export Operator, set_field!, apply!
-export Context, set_data!
-export RequestImmediate, RequestOrdered
-export CeedDim, det, setvoigt, setvoigt!, getvoigt, getvoigt!
-# CUDA
-export set_cufunction!
-# enums and globals
-export QuadMode, GAUSS, GAUSS_LOBATTO
-export MemType, MEM_HOST, MEM_DEVICE
-export CopyMode, COPY_VALUES, USE_POINTER, OWN_POINTER
-export EvalMode, EVAL_NONE, EVAL_INTERP, EVAL_GRAD, EVAL_DIV, EVAL_CURL, EVAL_WEIGHT
-export NormType, NORM_1, NORM_2, NORM_MAX
-export TransposeMode, NOTRANSPOSE, TRANSPOSE
-export Topology, LINE, TRIANGLE, QUAD, TET, PYRAMIC, PRISM, HEX
-export STRIDES_BACKEND
+export @interior_qf,
+    @witharray,
+    @witharray_read,
+    Abscissa,
+    AbscissaAndWeights,
+    Basis,
+    BasisCollocated,
+    COPY_VALUES,
+    Ceed,
+    CeedDim,
+    CeedInt,
+    CeedScalar,
+    CeedVector,
+    CeedVectorActive,
+    CeedVectorNone,
+    Context,
+    CopyMode,
+    EVAL_CURL,
+    EVAL_DIV,
+    EVAL_GRAD,
+    EVAL_INTERP,
+    EVAL_NONE,
+    EVAL_WEIGHT,
+    ElemRestriction,
+    ElemRestrictionNone,
+    EvalMode,
+    GAUSS,
+    GAUSS_LOBATTO,
+    HEX,
+    LINE,
+    MEM_DEVICE,
+    MEM_HOST,
+    MemType,
+    NORM_1,
+    NORM_2,
+    NORM_MAX,
+    NOTRANSPOSE,
+    NormType,
+    OWN_POINTER,
+    Operator,
+    PRISM,
+    PYRAMIC,
+    QFunction,
+    QFunctionNone,
+    QUAD,
+    QuadMode,
+    RequestImmediate,
+    RequestOrdered,
+    STRIDES_BACKEND,
+    TET,
+    TRANSPOSE,
+    TRIANGLE,
+    Topology,
+    TransposeMode,
+    USE_POINTER,
+    UserQFunction,
+    add_input!,
+    add_output!,
+    apply!,
+    apply!,
+    apply!,
+    apply,
+    create_elem_restriction,
+    create_elem_restriction_strided,
+    create_h1_basis,
+    create_identity_qfunction,
+    create_interior_qfunction,
+    create_tensor_h1_basis,
+    create_tensor_h1_lagrange_basis,
+    det,
+    extract_array,
+    extract_context,
+    gauss_quadrature,
+    get_preferred_memtype,
+    getdimension,
+    getnumcomponents,
+    getnumnodes,
+    getnumnodes1d,
+    getnumqpts,
+    getnumqpts1d,
+    getresource,
+    gettopology,
+    getvoigt!,
+    getvoigt,
+    iscuda,
+    isdeterministic,
+    lobatto_quadrature,
+    norm,
+    reciprocal!,
+    set_context!,
+    set_cufunction!,
+    set_data!,
+    set_field!,
+    setarray!,
+    setvalue!,
+    setvoigt!,
+    setvoigt,
+    sync_array!,
+    take_array!,
+    witharray,
+    witharray_read
 
 include("Globals.jl")
 include("Ceed.jl")

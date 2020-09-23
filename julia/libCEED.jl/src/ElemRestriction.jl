@@ -27,7 +27,8 @@ mutable struct ElemRestriction <: AbstractElemRestriction
     end
 end
 Base.getindex(r::ElemRestriction) = r.ref[]
-Base.show(io::IO, ::MIME"text/plain", e::ElemRestriction) = ceed_show(io, e, C.CeedElemRestrictionView)
+Base.show(io::IO, ::MIME"text/plain", e::ElemRestriction) =
+    ceed_show(io, e, C.CeedElemRestrictionView)
 
 @doc raw"""
     create_elem_restriction(ceed::Ceed, nelem, elemsize, ncomp, compstride, lsize, mtype::MemType, cmode::CopyMode, offsets::AbstractArray{CeedInt})
@@ -57,9 +58,30 @@ Create a `CeedElemRestriction`.
                 \textit{nelem}$. All offsets must be in the range $[0,
                 \textit{lsize} - 1]$.
 """
-function create_elem_restriction(c::Ceed, nelem, elemsize, ncomp, compstride, lsize, mtype::MemType, cmode::CopyMode, offsets::AbstractArray{CeedInt})
+function create_elem_restriction(
+    c::Ceed,
+    nelem,
+    elemsize,
+    ncomp,
+    compstride,
+    lsize,
+    mtype::MemType,
+    cmode::CopyMode,
+    offsets::AbstractArray{CeedInt},
+)
     ref = Ref{C.CeedElemRestriction}()
-    C.CeedElemRestrictionCreate(c[], nelem, elemsize, ncomp, compstride, lsize, mtype, cmode, offsets, ref)
+    C.CeedElemRestrictionCreate(
+        c[],
+        nelem,
+        elemsize,
+        ncomp,
+        compstride,
+        lsize,
+        mtype,
+        cmode,
+        offsets,
+        ref,
+    )
     ElemRestriction(ref)
 end
 

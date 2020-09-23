@@ -71,9 +71,19 @@ Create a tensor-product basis for $H^1$ discretizations.
 - `qweight1d`: Array of length `q` holding the quadrature weights on the
                reference element.
 """
-function create_tensor_h1_basis(c::Ceed, dim, ncomp, p, q, interp1d, grad1d, qref1d, qweight1d)
-    @assert size(interp1d) == (p,q)
-    @assert size(grad1d) == (p,q)
+function create_tensor_h1_basis(
+    c::Ceed,
+    dim,
+    ncomp,
+    p,
+    q,
+    interp1d,
+    grad1d,
+    qref1d,
+    qweight1d,
+)
+    @assert size(interp1d) == (p, q)
+    @assert size(grad1d) == (p, q)
     @assert length(qref1d) == q
     @assert length(qweight1d) == q
 
@@ -82,7 +92,18 @@ function create_tensor_h1_basis(c::Ceed, dim, ncomp, p, q, interp1d, grad1d, qre
     grad1d_rowmajor = collect(grad1d')
 
     ref = Ref{C.CeedBasis}()
-    C.CeedBasisCreateTensorH1(c[], dim, ncomp, p, q, interp1d_rowmajor, grad1d_rowmajor, qref1d, qweight1d, ref)
+    C.CeedBasisCreateTensorH1(
+        c[],
+        dim,
+        ncomp,
+        p,
+        q,
+        interp1d_rowmajor,
+        grad1d_rowmajor,
+        qref1d,
+        qweight1d,
+        ref,
+    )
     Basis(ref)
 end
 
@@ -106,7 +127,17 @@ Create a non tensor-product basis for H^1 discretizations
 - `qweight`: Array of length `nqpts` holding the quadrature weights on the
              reference element.
 """
-function create_h1_basis(c::Ceed, topo::Topology, ncomp, nnodes, nqpts, interp, grad, qref, qweight)
+function create_h1_basis(
+    c::Ceed,
+    topo::Topology,
+    ncomp,
+    nnodes,
+    nqpts,
+    interp,
+    grad,
+    qref,
+    qweight,
+)
     @assert size(interp) == (nqpts, nnodes)
     @assert size(grad) == (dim, nqpts, nnodes)
     @assert length(qref) == nqpts
@@ -114,10 +145,21 @@ function create_h1_basis(c::Ceed, topo::Topology, ncomp, nnodes, nqpts, interp, 
 
     # Convert from Julia matrices and tensors (column-major) to row-major format
     interp_rowmajor = collect(interp')
-    grad_rowmajor = permutedims(grad, [3,2,1])
+    grad_rowmajor = permutedims(grad, [3, 2, 1])
 
     ref = Ref{C.CeedBasis}()
-    C.CeedBasisCreateH1(c[], topo, ncomp, nnodes, nqpts, interp_rowmajor, grad_rowmajor, qref, qweight, ref)
+    C.CeedBasisCreateH1(
+        c[],
+        topo,
+        ncomp,
+        nnodes,
+        nqpts,
+        interp_rowmajor,
+        grad_rowmajor,
+        qref,
+        qweight,
+        ref,
+    )
     Basis(ref)
 end
 
@@ -140,7 +182,14 @@ Set the [`EvalMode`](@ref) `emode` to:
 - `CEED_EVAL_GRAD` to use gradients,
 - `CEED_EVAL_WEIGHT` to use quadrature weights.
 """
-function apply!(b::Basis, nelem, tmode::TransposeMode, emode::EvalMode, u::AbstractCeedVector, v::AbstractCeedVector)
+function apply!(
+    b::Basis,
+    nelem,
+    tmode::TransposeMode,
+    emode::EvalMode,
+    u::AbstractCeedVector,
+    v::AbstractCeedVector,
+)
     C.CeedBasisApply(b[], nelem, tmode, emode, u[], v[])
 end
 
@@ -154,7 +203,14 @@ v::AbstractCeedVector)), but automatically convert from Julia arrays to
 
 The result will be returned in a newly allocated array of the correct size.
 """
-function apply(c::Ceed, b::Basis, u::AbstractVector; nelem=1, tmode=NOTRANSPOSE, emode=EVAL_INTERP)
+function apply(
+    c::Ceed,
+    b::Basis,
+    u::AbstractVector;
+    nelem=1,
+    tmode=NOTRANSPOSE,
+    emode=EVAL_INTERP,
+)
     u_vec = CeedVector(c, u)
 
     len_v = (tmode == TRANSPOSE) ? getnumnodes(b) : getnumqpts(b)
@@ -189,7 +245,6 @@ function gettopology(b::Basis)
     C.CeedBasisGetTopology(b[], topo)
     topo[]
 end
-
 
 """
     getnumcomponents(b::Basis)

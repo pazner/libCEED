@@ -1,4 +1,5 @@
 # Automatically generated using Clang.jl
+#! format: off
 
 const FILE = Cvoid
 

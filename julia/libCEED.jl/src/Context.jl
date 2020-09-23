@@ -11,7 +11,8 @@ mutable struct Context
     end
 end
 Base.getindex(ctx::Context) = ctx.ref[]
-Base.show(io::IO, ::MIME"text/plain", c::Context) = ceed_show(io, c, C.CeedQFunctionContextView)
+Base.show(io::IO, ::MIME"text/plain", c::Context) =
+    ceed_show(io, c, C.CeedQFunctionContextView)
 
 """
     Context(ceed::Ceed, data; mtype=MEM_HOST, cmode=USE_POINTER)
@@ -45,7 +46,13 @@ function set_data!(ctx::Context, mtype, cmode::CopyMode, data)
         error("set_data!: copy mode OWN_POINTER is not supported.")
     end
 
-    C.CeedQFunctionContextSetData(ctx[], mtype, cmode, sizeof(data), pointer_from_objref(data))
+    C.CeedQFunctionContextSetData(
+        ctx[],
+        mtype,
+        cmode,
+        sizeof(data),
+        pointer_from_objref(data),
+    )
 end
 
 Base.setindex!(ctx::Context, data) = set_data!(ctx, MEM_HOST, USE_POINTER, data)

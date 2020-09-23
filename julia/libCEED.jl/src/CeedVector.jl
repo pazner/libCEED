@@ -44,7 +44,7 @@ Base.ndims(::CeedVector) = 1
 Base.ndims(::Type{CeedVector}) = 1
 Base.axes(v::CeedVector) = (Base.OneTo(length(v)),)
 
-function Base.length(::Type{T}, v::CeedVector) where T
+function Base.length(::Type{T}, v::CeedVector) where {T}
     len = Ref{C.CeedInt}()
     C.CeedVectorGetLength(v[], len)
     return T(len[])
@@ -155,7 +155,7 @@ function witharray_parse(assignment, args)
     mtype = MEM_HOST
     sz = :((length($(esc(v))),))
     body = args[end]
-    for i=1:length(args)-1
+    for i = 1:length(args)-1
         a = args[i]
         if !Meta.isexpr(a, :(=))
             error("Incorrect call to @witharray or @witharray_read")
@@ -230,7 +230,7 @@ Base.length(v::CeedVector) = length(Int, v)
 Sets the values of [`CeedVector`](@ref) `v` equal to those of `v2` using
 broadcasting.
 """
-Base.setindex!(v::CeedVector, v2::AbstractArray) = @witharray a=v a .= v2
+Base.setindex!(v::CeedVector, v2::AbstractArray) = @witharray a = v a .= v2
 
 """
     CeedVector(c::Ceed, v2::AbstractVector)
@@ -250,7 +250,7 @@ Create a new `Vector` by copying the contents of `v`.
 """
 function Base.Vector(v::CeedVector)
     v2 = Vector{CeedScalar}(undef, length(v))
-    @witharray_read a=v v2 .= a
+    @witharray_read a = v v2 .= a
 end
 
 """

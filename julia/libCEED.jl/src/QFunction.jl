@@ -28,7 +28,8 @@ end
 QFunction(ref::Ref{C.CeedQFunction}) = QFunction(ref, nothing)
 destroy(qf::QFunction) = C.CeedQFunctionDestroy(qf.ref)
 Base.getindex(qf::QFunction) = qf.ref[]
-Base.show(io::IO, ::MIME"text/plain", qf::QFunction) = ceed_show(io, qf, C.CeedQFunctionView)
+Base.show(io::IO, ::MIME"text/plain", qf::QFunction) =
+    ceed_show(io, qf, C.CeedQFunctionView)
 
 function create_interior_qfunction(c::Ceed, f::UserQFunction; vlength=1)
     ref = Ref{C.CeedQFunction}()
@@ -114,12 +115,12 @@ function get_field_sizes(qf::AbstractQFunction)
     input_sizes = zeros(CeedInt, ninputs[])
     output_sizes = zeros(CeedInt, noutputs[])
 
-    for i=1:ninputs[]
+    for i = 1:ninputs[]
         field = unsafe_load(inputs[], i)
         C.CeedQFunctionFieldGetSize(field, pointer(input_sizes, i))
     end
 
-    for i=1:noutputs[]
+    for i = 1:noutputs[]
         field = unsafe_load(outputs[], i)
         C.CeedQFunctionFieldGetSize(field, pointer(output_sizes, i))
     end

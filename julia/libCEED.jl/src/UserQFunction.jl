@@ -9,7 +9,7 @@ function UserQFunction(ceed::Ceed, f, kf, cuf)
     UserQFunction(f, kf, fptr, cuf)
 end
 
-@inline function extract_context(ptr, ::Type{T}) where T
+@inline function extract_context(ptr, ::Type{T}) where {T}
     unsafe_load(Ptr{T}(ptr))
 end
 
@@ -17,36 +17,59 @@ end
     UnsafeArray(Ptr{CeedScalar}(unsafe_load(ptr, idx)), dims)
 end
 
-function generate_user_qfunction(ceed, def_module, qf_name, Q, constants, array_names, ctx, arrays, dims_in, dims_out, body)
+function generate_user_qfunction(
+    ceed,
+    def_module,
+    qf_name,
+    Q,
+    constants,
+    array_names,
+    ctx,
+    arrays,
+    dims_in,
+    dims_out,
+    body,
+)
     const_assignments = []
     for c ∈ constants
         push!(const_assignments, :($(c[1]) = $(c[2])))
     end
 
     qf1 = gensym(qf_name)
-    f = Core.eval(def_module, quote
-        @inline function $qf1(ctx_ptr::Ptr{Cvoid}, $Q::CeedInt, in_ptr::Ptr{Ptr{CeedScalar}}, out_ptr::Ptr{Ptr{CeedScalar}})
-            $(const_assignments...)
-            $ctx
-            $arrays
-            $body
-            CeedInt(0)
-        end
-    end)
+    f = Core.eval(
+        def_module,
+        quote
+            @inline function $qf1(
+                ctx_ptr::Ptr{Cvoid},
+                $Q::CeedInt,
+                in_ptr::Ptr{Ptr{CeedScalar}},
+                out_ptr::Ptr{Ptr{CeedScalar}},
+            )
+                $(const_assignments...)
+                $ctx
+                $arrays
+                $body
+                CeedInt(0)
+            end
+        end,
+    )
     f_qn = QuoteNode(f)
     rt = :CeedInt
     at = :(Core.svec(Ptr{Cvoid}, CeedInt, Ptr{Ptr{CeedScalar}}, Ptr{Ptr{CeedScalar}}))
     fptr = eval(Expr(:cfunction, Ptr{Cvoid}, f_qn, rt, at, QuoteNode(:ccall)))
 
     qf2 = gensym(qf_name)
-    kf = Core.eval(def_module, quote
-        @inline function $qf2(ctx_ptr::Ptr{Cvoid}, $Q::CeedInt, $(array_names...))
-            $(const_assignments...)
-            $ctx
-            $body
-            nothing
-        end
-    end)
+    kf = Core.eval(
+        def_module,
+        quote
+            @inline function $qf2(ctx_ptr::Ptr{Cvoid}, $Q::CeedInt, $(array_names...))
+                $(const_assignments...)
+                $ctx
+                $body
+                nothing
+            end
+        end,
+    )
     cuf = mk_cufunction(ceed, def_module, qf_name, kf, dims_in, dims_out)
 
     UserQFunction(f, fptr, kf, cuf)
@@ -75,7 +98,7 @@ function meta_user_qfunction(ceed, def_module, qf, Q, args)
             inout = a.args[2].value
             ndim = length(a.args) - 3
             dims = Vector{Expr}(undef, ndim)
-            for d=1:ndim
+            for d = 1:ndim
                 dims[d] = :(Int($(a.args[d+3])))
             end
             if inout == :in
@@ -108,7 +131,7 @@ function meta_user_qfunction(ceed, def_module, qf, Q, args)
         $(arrays...)
     end)
 
-    arr_names = [names_in ; names_out]
+    arr_names = [names_in; names_out]
 
     return :(generate_user_qfunction(
         $ceed,
@@ -121,7 +144,7 @@ function meta_user_qfunction(ceed, def_module, qf, Q, args)
         $arrays,
         [$(dims_in...)],
         [$(dims_out...)],
-        $body
+        $body,
     ))
 end
 
@@ -201,14 +224,17 @@ macro interior_qf(args)
             # Skip first dim (num qpts)
             ndim = length(a.args) - 4
             dims = Vector{Expr}(undef, ndim)
-            for d=1:ndim
+            for d = 1:ndim
                 dims[d] = esc(:(Int($(a.args[d+4]))))
             end
             sz_expr = :(prod(($(dims...),)))
             if inout == :in
                 push!(fields_in, :(add_input!($user_qf, $field_name, $sz_expr, $evalmode)))
             elseif inout == :out
-                push!(fields_out, :(add_output!($user_qf, $field_name, $sz_expr, $evalmode)))
+                push!(
+                    fields_out,
+                    :(add_output!($user_qf, $field_name, $sz_expr, $evalmode)),
+                )
             end
         end
     end

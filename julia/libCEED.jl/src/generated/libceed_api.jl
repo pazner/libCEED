@@ -1,6 +1,6 @@
 # Julia wrapper for header: ceed.h
 # Automatically generated using Clang.jl
-
+#! format: off
 
 function CeedInit(resource, ceed)
     ccall((:CeedInit, libceed), Cint, (Cstring, Ptr{Ceed}), resource, ceed)

@@ -49,13 +49,24 @@ function Operator(c::Ceed; qf, dqf=QFunctionNone(), dqfT=QFunctionNone(), fields
     op
 end
 
-function Operator(c::Ceed, qf::AbstractQFunction, dqf::AbstractQFunction, dqfT::AbstractQFunction)
+function Operator(
+    c::Ceed,
+    qf::AbstractQFunction,
+    dqf::AbstractQFunction,
+    dqfT::AbstractQFunction,
+)
     ref = Ref{C.CeedOperator}()
     C.CeedOperatorCreate(c[], qf[], dqf[], dqfT[], ref)
     Operator(ref, qf, dqf, dqfT)
 end
 
-function set_field!(op::Operator, fieldname::AbstractString, r::AbstractElemRestriction, b::AbstractBasis, v::AbstractCeedVector)
+function set_field!(
+    op::Operator,
+    fieldname::AbstractString,
+    r::AbstractElemRestriction,
+    b::AbstractBasis,
+    v::AbstractCeedVector,
+)
     C.CeedOperatorSetField(op[], fieldname, r[], b[], v[])
 end
 
@@ -68,12 +79,17 @@ result in the output vector `vout`.
 For non-blocking application, the user can specify a request object. By default,
 immediate (synchronous) completion is requested.
 """
-function apply!(op::Operator, vin::AbstractCeedVector, vout::AbstractCeedVector, request::AbstractRequest=RequestImmediate())
+function apply!(
+    op::Operator,
+    vin::AbstractCeedVector,
+    vout::AbstractCeedVector,
+    request::AbstractRequest=RequestImmediate(),
+)
     try
         C.CeedOperatorApply(op[], vin[], vout[], request[])
     catch e
         # Cannot recover from exceptions in operator apply
-        printstyled(stderr, "libCEED.jl: ", color=:red, bold=true)
+        printstyled(stderr, "libCEED.jl: "; color=:red, bold=true)
         println("error occurred when applying operator")
         Base.display_error(stderr, Base.catch_stack())
         # Exit without running atexit hooks or finalizers

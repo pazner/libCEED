@@ -28,13 +28,18 @@ function __init__()
     global libceed_handle = dlopen(libceed)
     # some global variables
     CEED_STRIDES_BACKEND[] = cglobal((:CEED_STRIDES_BACKEND, libceed))
-    CEED_BASIS_COLLOCATED[] = unsafe_load(cglobal((:CEED_BASIS_COLLOCATED, libceed), CeedBasis))
+    CEED_BASIS_COLLOCATED[] =
+        unsafe_load(cglobal((:CEED_BASIS_COLLOCATED, libceed), CeedBasis))
     CEED_VECTOR_ACTIVE[] = unsafe_load(cglobal((:CEED_VECTOR_ACTIVE, libceed), CeedVector))
     CEED_VECTOR_NONE[] = unsafe_load(cglobal((:CEED_VECTOR_NONE, libceed), CeedVector))
-    CEED_ELEMRESTRICTION_NONE[] = unsafe_load(cglobal((:CEED_ELEMRESTRICTION_NONE, libceed), CeedElemRestriction))
-    CEED_QFUNCTION_NONE[] = unsafe_load(cglobal((:CEED_QFUNCTION_NONE, libceed), CeedQFunction))
-    CEED_REQUEST_IMMEDIATE[] = unsafe_load(cglobal((:CEED_REQUEST_IMMEDIATE, libceed), Ptr{CeedRequest}))
-    CEED_REQUEST_ORDERED[] = unsafe_load(cglobal((:CEED_REQUEST_ORDERED, libceed), Ptr{CeedRequest}))
+    CEED_ELEMRESTRICTION_NONE[] =
+        unsafe_load(cglobal((:CEED_ELEMRESTRICTION_NONE, libceed), CeedElemRestriction))
+    CEED_QFUNCTION_NONE[] =
+        unsafe_load(cglobal((:CEED_QFUNCTION_NONE, libceed), CeedQFunction))
+    CEED_REQUEST_IMMEDIATE[] =
+        unsafe_load(cglobal((:CEED_REQUEST_IMMEDIATE, libceed), Ptr{CeedRequest}))
+    CEED_REQUEST_ORDERED[] =
+        unsafe_load(cglobal((:CEED_REQUEST_ORDERED, libceed), Ptr{CeedRequest}))
 end
 
 end # module

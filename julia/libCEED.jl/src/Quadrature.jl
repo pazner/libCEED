@@ -10,7 +10,7 @@ function gauss_quadrature(q)
     x = zeros(CeedScalar, q)
     w = zeros(CeedScalar, q)
     C.CeedGaussQuadrature(q, x, w)
-    x,w
+    x, w
 end
 
 struct QuadratureMode{T} end
@@ -28,10 +28,10 @@ returned as a tuple `(x,w)`.
 
 Otherwise, (if `mode` is `Abscissa`), then only the abscissa `x` are returned.
 """
-function lobatto_quadrature(q, mode::Mode=Abscissa) where Mode
+function lobatto_quadrature(q, mode::Mode=Abscissa) where {Mode}
     return_weights = (mode == AbscissaAndWeights)
     x = zeros(CeedScalar, q)
     w = (return_weights) ? zeros(CeedScalar, q) : C_NULL
     C.CeedLobattoQuadrature(q, x, w)
-    return_weights ? (x,w) : x
+    return_weights ? (x, w) : x
 end
