@@ -16,10 +16,11 @@ function generate_kernel(qf_name, kf, dims_in, dims_out)
     args = [f_ins; f_outs]
 
     def_ins = [
-        :($(f_ins[i]) = MArray{Tuple{1,$(dims_in[i]...)},Float64}(undef)) for i = 1:ninputs
+        :($(f_ins[i]) = libCEED.MArray{Tuple{$(dims_in[i]...)},Float64}(undef))
+        for i = 1:ninputs
     ]
     def_outs = [
-        :($(f_outs[i]) = MArray{Tuple{1,$(dims_out[i]...)},Float64}(undef))
+        :($(f_outs[i]) = libCEED.MArray{Tuple{$(dims_out[i]...)},Float64}(undef))
         for i = 1:noutputs
     ]
 
@@ -27,7 +28,7 @@ function generate_kernel(qf_name, kf, dims_in, dims_out)
         :(
             for j = 1:$(input_sz[i])
                 $(f_ins[i])[j] = unsafe_load(
-                    CUDA.DevicePtr(CuPtr{CeedScalar}(fields.inputs[$i])),
+                    libCEED.CUDA.DevicePtr(libCEED.CuPtr{CeedScalar}(fields.inputs[$i])),
                     q + (j - 1) * Q,
                     a,
                 )
@@ -39,7 +40,7 @@ function generate_kernel(qf_name, kf, dims_in, dims_out)
         :(
             for j = 1:$(output_sz[i])
                 unsafe_store!(
-                    CUDA.DevicePtr(CuPtr{CeedScalar}(fields.outputs[$i])),
+                    libCEED.CUDA.DevicePtr(libCEED.CuPtr{CeedScalar}(fields.outputs[$i])),
                     $(f_outs[i])[j],
                     q + (j - 1) * Q,
                     a,
@@ -52,10 +53,10 @@ function generate_kernel(qf_name, kf, dims_in, dims_out)
 
     quote
         function $qf(ctx_ptr, Q, fields)
-            gd = gridDim()
-            bi = blockIdx()
-            bd = blockDim()
-            ti = threadIdx()
+            gd = libCEED.gridDim()
+            bi = libCEED.blockIdx()
+            bd = libCEED.blockDim()
+            ti = libCEED.threadIdx()
 
             inc = bd.x * gd.x
 

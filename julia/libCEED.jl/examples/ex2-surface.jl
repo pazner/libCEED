@@ -78,16 +78,14 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     if !gallery
         @interior_qf build_qfunc = (
             ceed,
-            Q,
             dim=dim,
-            (J, :in, EVAL_GRAD, Q, dim, dim),
-            (w, :in, EVAL_WEIGHT, Q),
-            (qdata, :out, EVAL_NONE, Q, dim * (dim + 1) ÷ 2),
-            @inbounds @simd for i = 1:Q
-                Ji = SMatrix{dim,dim}(@view(J[i, :, :]))
-                Jinv = inv(Ji)
-                qdata[i, :] .= setvoigt(w[i] * det(Ji) * Jinv * Jinv')
-            end
+            (J, :in, EVAL_GRAD, dim, dim),
+            (w, :in, EVAL_WEIGHT),
+            (qdata, :out, EVAL_NONE, dim * (dim + 1) ÷ 2),
+            begin
+                Jinv = inv(J)
+                qdata .= setvoigt(w[] * det(J) * Jinv * Jinv')
+            end,
         )
     else
         build_qfunc = create_interior_qfunction(ceed, "Poisson$(dim)DBuild")
@@ -118,16 +116,14 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     if !gallery
         @interior_qf apply_qfunc = (
             ceed,
-            Q,
             dim=dim,
-            (du, :in, EVAL_GRAD, Q, dim),
-            (qdata, :in, EVAL_NONE, Q, dim * (dim + 1) ÷ 2),
-            (dv, :out, EVAL_GRAD, Q, dim),
-            @inbounds @simd for i = 1:Q
-                dXdxdXdxT = getvoigt(@view(qdata[i, :]), CeedDim(dim))
-                dui = SVector{dim}(@view(du[i, :]))
-                dv[i, :] .= dXdxdXdxT * dui
-            end
+            (du, :in, EVAL_GRAD, dim),
+            (qdata, :in, EVAL_NONE, dim * (dim + 1) ÷ 2),
+            (dv, :out, EVAL_GRAD, dim),
+            begin
+                dXdxdXdxT = getvoigt(qdata)
+                dv .= dXdxdXdxT * du
+            end,
         )
     else
         apply_qfunc = create_interior_qfunction(ceed, "Poisson$(dim)DApply")
@@ -176,5 +172,17 @@ run_ex2(
     sol_order=4,
     num_qpts=6,
     prob_size=-1,
+    gallery=false,
+)
+
+GC.gc()
+
+@time run_ex2(
+    ceed_spec="/cpu/self",
+    dim=3,
+    mesh_order=4,
+    sol_order=4,
+    num_qpts=6,
+    prob_size=5000000,
     gallery=false,
 )

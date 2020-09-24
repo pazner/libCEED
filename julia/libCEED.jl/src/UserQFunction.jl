@@ -17,15 +17,14 @@ end
     UnsafeArray(Ptr{CeedScalar}(unsafe_load(ptr, idx)), dims)
 end
 
+# TODO: escape ctx_ptr
 function generate_user_qfunction(
     ceed,
     def_module,
     qf_name,
-    Q,
     constants,
     array_names,
     ctx,
-    arrays,
     dims_in,
     dims_out,
     body,
@@ -35,6 +34,33 @@ function generate_user_qfunction(
         push!(const_assignments, :($(c[1]) = $(c[2])))
     end
 
+    idx = gensym(:i)
+    Q = gensym(:Q)
+    in_ptr = gensym(:in_ptr)
+    out_ptr = gensym(:out_ptr)
+
+    arrays = []
+    array_views = []
+    n_in = length(dims_in)
+    for i = 1:length(array_names)
+        arr_name = array_names[i]
+        i_inout = (i <= n_in) ? i : i - n_in
+        dims = (i <= n_in) ? dims_in[i] : dims_out[i-n_in]
+        ptr = (i <= n_in) ? in_ptr : out_ptr
+        arr_name_gen = gensym(arr_name)
+        push!(
+            arrays,
+            :($arr_name_gen = extract_array($ptr, $i_inout, (Int($Q), $(dims...)))),
+        )
+        slice = Expr(:ref, arr_name_gen, idx, (:(:) for i = 1:length(dims))...)
+        if i <= n_in
+            S = Tuple{dims...}
+            push!(array_views, :($arr_name = libCEED.SArray{$S}(@view $slice)))
+        else
+            push!(array_views, :($arr_name = @view $slice))
+        end
+    end
+
     qf1 = gensym(qf_name)
     f = Core.eval(
         def_module,
@@ -42,13 +68,16 @@ function generate_user_qfunction(
             @inline function $qf1(
                 ctx_ptr::Ptr{Cvoid},
                 $Q::CeedInt,
-                in_ptr::Ptr{Ptr{CeedScalar}},
-                out_ptr::Ptr{Ptr{CeedScalar}},
+                $in_ptr::Ptr{Ptr{CeedScalar}},
+                $out_ptr::Ptr{Ptr{CeedScalar}},
             )
                 $(const_assignments...)
                 $ctx
-                $arrays
-                $body
+                $(arrays...)
+                @inbounds @simd for $idx = 1:$Q
+                    $(array_views...)
+                    $body
+                end
                 CeedInt(0)
             end
         end,
@@ -75,18 +104,18 @@ function generate_user_qfunction(
     UserQFunction(f, fptr, kf, cuf)
 end
 
-function meta_user_qfunction(ceed, def_module, qf, Q, args)
+function meta_user_qfunction(ceed, def_module, qf, args)
     qf_name = Meta.quot(qf)
-    Q_name = Meta.quot(Q)
 
     body = nothing
     ctx = nothing
     constants = []
     arrays = []
+    array_views = []
     dims_in = []
     dims_out = []
-    names_in = []
-    names_out = []
+    names_in = Symbol[]
+    names_out = Symbol[]
 
     for a ∈ args[1:end-1]
         if Meta.isexpr(a, :(=))
@@ -101,21 +130,16 @@ function meta_user_qfunction(ceed, def_module, qf, Q, args)
             for d = 1:ndim
                 dims[d] = :(Int($(a.args[d+3])))
             end
+            dims_expr = :(Int[$(esc.(a.args[4:end])...)])
             if inout == :in
-                ptr = :in_ptr
-                arr = dims_in
-                i_inout = length(dims_in) + 1
+                push!(dims_in, dims_expr)
                 push!(names_in, arr_name)
             elseif inout == :out
-                ptr = :out_ptr
-                arr = dims_out
-                i_inout = length(dims_out) + 1
+                push!(dims_out, dims_expr)
                 push!(names_out, arr_name)
             else
                 error("Array specification must be either :in or :out. Given $inout.")
             end
-            push!(arrays, :($arr_name = extract_array($ptr, $i_inout, ($(dims...),))))
-            push!(arr, :(Int[$(esc.(a.args[5:end])...)]))
         elseif Meta.isexpr(a, :(::))
             ctx_name = a.args[1]
             ctx_type = a.args[2]
@@ -126,22 +150,15 @@ function meta_user_qfunction(ceed, def_module, qf, Q, args)
     end
 
     body = Meta.quot(args[end])
-
-    arrays = Meta.quot(quote
-        $(arrays...)
-    end)
-
     arr_names = [names_in; names_out]
 
     return :(generate_user_qfunction(
         $ceed,
         $def_module,
         $qf_name,
-        $Q_name,
         [$(constants...)],
         $arr_names,
         $ctx,
-        $arrays,
         [$(dims_in...)],
         [$(dims_out...)],
         $body,
@@ -155,18 +172,15 @@ Creates a user-defined interior (volumentric) Q-function, and assigns it to a
 variable named `name`. The definition of the Q-function is given as:
 ```
 @interior_qf user_qf=(
-    ceed::CEED, Q,
+    ceed::CEED,
     [const1=val1, const2=val2, ...],
     [ctx::ContextType],
-    (I1, :in, EvalMode, Q, dims...),
-    (I2, :in, EvalMode, Q, dims...),
-    (O1, :out, EvalMode, Q, dims...),
+    (I1, :in, EvalMode, dims...),
+    (I2, :in, EvalMode, dims...),
+    (O1, :out, EvalMode, dims...),
     body
 )
 ```
-In the above, `Q` is the name of a variable which will be bound to the number of
-Q-points being operated on.
-
 The definitions of form `const=val` are used for definitions which will be
 compile-time constants in the Q-function. For example, if `dim` is a variable
 set to the dimension of the problem, then `dim=dim` will make `dim` available in
@@ -178,10 +192,11 @@ type of the context struct, and `ctx` is the name to which is will be bound in
 the body of the Q-function.
 
 This is followed by the definition of the input and output arrays, which take
-the form `(arr_name, (:in|:out), EvalMode, Q, dims...)`. Each array will be
+the form `(arr_name, (:in|:out), EvalMode, dims...)`. Each array will be
 bound to a variable named `arr_name`. Input arrays should be tagged with :in,
 and output arrays with :out. An `EvalMode` should be specified, followed by the
-dimensions of the array. The first dimension is always `Q`.
+dimensions of the array. If the array consists of scalars (one number per
+Q-point) then `dims` should be omitted.
 
 # Examples
 
@@ -189,19 +204,17 @@ dimensions of the array. The first dimension is always `Q`.
   the quadrature weight times the Jacobian determinant. The mesh Jacobian (the
   gradient of the nodal mesh points) and the quadrature weights are given as
   input arrays, and the Q-data is the output array. `dim` is given as a
-  compile-time constant, and [`CeedDim`](@ref) is used to select a specialized
-  determinant implementation for the given dimension. Because `dim` is a
-  constant, the dispatch based on `CeedDim(dim)` is static (type stable). The
-  `@view` macro is used to avoid allocations when accessing the slices.
+  compile-time constant, and so the array `J` is statically sized, and
+  therefore `det(J)` will automatically dispatch to an optimized implementation
+  for the given dimension.
 ```
 @interior_qf build_qfunc = (
-    ceed, Q, dim=dim,
-    (J, :in, EVAL_GRAD, Q, dim, dim),
-    (w, :in, EVAL_WEIGHT, Q),
-    (qdata, :out, EVAL_NONE, Q),
-    @inbounds @simd for i=1:Q
-        qdata[i] = w[i]*det(@view(J[i,:,:]), CeedDim(dim))
-    end)
+    ceed, dim=dim,
+    (J, :in, EVAL_GRAD, dim, dim),
+    (w, :in, EVAL_WEIGHT),
+    (qdata, :out, EVAL_NONE),
+    qdata[] = w[]*det(J)
+)
 ```
 """
 macro interior_qf(args)
@@ -222,10 +235,10 @@ macro interior_qf(args)
             inout = a.args[2].value
             evalmode = a.args[3]
             # Skip first dim (num qpts)
-            ndim = length(a.args) - 4
+            ndim = length(a.args) - 3
             dims = Vector{Expr}(undef, ndim)
             for d = 1:ndim
-                dims[d] = esc(:(Int($(a.args[d+4]))))
+                dims[d] = esc(:(Int($(a.args[d+3]))))
             end
             sz_expr = :(prod(($(dims...),)))
             if inout == :in
@@ -239,7 +252,7 @@ macro interior_qf(args)
         end
     end
 
-    gen_user_qf = meta_user_qfunction(ceed, __module__, qf, args[2], args[3:end])
+    gen_user_qf = meta_user_qfunction(ceed, __module__, qf, args[2:end])
 
     quote
         $user_qf = create_interior_qfunction($ceed, $gen_user_qf)

@@ -34,7 +34,7 @@ Given a symmetric matrix `J`, return a `SVector` that encodes `J` using the
 The size of the symmetric matrix `J` must be known statically, either specified
 using [`CeedDim`](@ref) or `StaticArray`.
 """
-@inline setvoigt(J::StaticArray{Tuple{D,D},T,2}) where {D,T} = setvoigt(J, CeedDim(D))
+@inline setvoigt(J::StaticArray{Tuple{D,D}}) where {D} = setvoigt(J, CeedDim(D))
 @inline setvoigt(J, ::CeedDim{1}) = @inbounds @SVector [J[1]]
 @inline setvoigt(J, ::CeedDim{2}) = @inbounds @SVector [J[1], J[4], J[2]]
 @inline setvoigt(J, ::CeedDim{3}) = @inbounds @SVector [J[1], J[5], J[9], J[6], J[3], J[2]]
@@ -76,6 +76,9 @@ corresponding `SMatrix`.
     V[6] V[2] V[4]
     V[5] V[4] V[3]
 ]
+@inline getvoigt(V::StaticArray{Tuple{1}}) = getvoigt(V, CeedDim(1))
+@inline getvoigt(V::StaticArray{Tuple{3}}) = getvoigt(V, CeedDim(2))
+@inline getvoigt(V::StaticArray{Tuple{6}}) = getvoigt(V, CeedDim(3))
 
 @inline function getvoigt!(J, V, ::CeedDim{1})
     @inbounds J[1, 1] = V[1]

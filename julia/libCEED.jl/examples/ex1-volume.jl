@@ -70,14 +70,11 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     if !gallery
         @interior_qf build_qfunc = (
             ceed,
-            Q,
             dim=dim,
-            (J, :in, EVAL_GRAD, Q, dim, dim),
-            (w, :in, EVAL_WEIGHT, Q),
-            (qdata, :out, EVAL_NONE, Q),
-            @inbounds @simd for i = 1:Q
-                qdata[i] = w[i] * det(@view(J[i, :, :]), CeedDim(dim))
-            end
+            (J, :in, EVAL_GRAD, dim, dim),
+            (w, :in, EVAL_WEIGHT),
+            (qdata, :out, EVAL_NONE),
+            qdata[]=w[] * det(J),
         )
     else
         build_qfunc = create_interior_qfunction(ceed, "Mass$(dim)DBuild")
@@ -108,13 +105,10 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     if !gallery
         @interior_qf apply_qfunc = (
             ceed,
-            Q,
-            (u, :in, EVAL_INTERP, Q),
-            (qdata, :in, EVAL_NONE, Q),
-            (v, :out, EVAL_INTERP, Q),
-            @inbounds @simd for i = 1:Q
-                v[i] = qdata[i] * u[i]
-            end
+            (u, :in, EVAL_INTERP),
+            (qdata, :in, EVAL_NONE),
+            (v, :out, EVAL_INTERP),
+            v[]=qdata[] * u[],
         )
     else
         apply_qfunc = create_interior_qfunction(ceed, "MassApply")
