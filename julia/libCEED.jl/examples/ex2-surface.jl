@@ -174,15 +174,3 @@ run_ex2(
     prob_size=-1,
     gallery=false,
 )
-
-GC.gc()
-
-@time run_ex2(
-    ceed_spec="/cpu/self",
-    dim=3,
-    mesh_order=4,
-    sol_order=4,
-    num_qpts=6,
-    prob_size=5000000,
-    gallery=false,
-)

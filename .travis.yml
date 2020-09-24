@@ -116,7 +116,7 @@ jobs:
      julia: 1
      install:
        - make info && make -j4
-       - export JULIA_LIBCEED_LIB=$(find $PWD/lib -name "libceed*")
+       - export JULIA_LIBCEED_LIB=$(find $PWD/lib -name "libceed.*")
        - pushd julia/libCEED.jl
      script:
        - julia --project -e 'import Pkg; Pkg.build(); Pkg.test("libCEED"; coverage=true)'
