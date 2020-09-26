@@ -59,6 +59,16 @@ using Test, libCEED, LinearAlgebra, StaticArrays
 
         @test CeedVectorActive()[] == libCEED.C.CEED_VECTOR_ACTIVE[]
         @test CeedVectorNone()[] == libCEED.C.CEED_VECTOR_NONE[]
+
+        io = IOBuffer()
+        summary(io, v)
+        @test String(take!(io)) == "$n-element CeedVector"
+        summary(io, v)
+        println(io, ":")
+        @witharray_read(a = v, Base.print_array(io, a))
+        s1 = String(take!(io))
+        show(io, MIME("text/plain"), v)
+        @test s1 == String(take!(io))
     end
 
     @testset "Basis" begin
@@ -100,7 +110,7 @@ using Test, libCEED, LinearAlgebra, StaticArrays
             @test det(J, D) ≈ det(J)
             J = J + J' # make symmetric
             @test setvoigt(SMatrix{dim,dim}(J)) == setvoigt(J, D)
-            @test getvoigt(setvoigt(J, D), D) == J
+            @test getvoigt(setvoigt(J, D)) == J
             V = zeros(dim*(dim + 1)÷2)
             setvoigt!(V, J, D)
             @test V == setvoigt(J, D)
@@ -108,5 +118,36 @@ using Test, libCEED, LinearAlgebra, StaticArrays
             getvoigt!(J2, V, D)
             @test J2 == J
         end
+    end
+
+    @testset "QFunction" begin
+        c = Ceed()
+
+        id = create_identity_qfunction(c, 1, EVAL_INTERP, EVAL_INTERP)
+        Q = 10
+        v = rand(Q)
+        v1 = CeedVector(c, v)
+        v2 = CeedVector(c, Q)
+        apply!(id, Q, [v1], [v2])
+        @test @witharray(a=v2, a == v)
+
+        @interior_qf id2 = (c, (a, :in, EVAL_INTERP), (b, :out, EVAL_INTERP), b .= a)
+        v2[] = 0.0
+        apply!(id2, Q, [v1], [v2])
+        @test @witharray(a=v2, a == v)
+
+        dim = 3
+        @interior_qf qf = (
+            c,
+            dim = dim,
+            (a, :in, EVAL_GRAD, dim),
+            (b, :in, EVAL_INTERP),
+            (c, :out, EVAL_NONE),
+            nothing
+        )
+        in_sz, out_sz = libCEED.get_field_sizes(qf)
+        @test in_sz == [dim, 1]
+        @test out_sz == [1]
+        @test QFunctionNone()[] == libCEED.C.CEED_QFUNCTION_NONE[]
     end
 end

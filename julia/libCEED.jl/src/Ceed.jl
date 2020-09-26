@@ -17,7 +17,7 @@ function Ceed(spec::AbstractString="/cpu/self")
     end
     return obj
 end
-destroy(c::Ceed) = C.CeedDestroy(c.ref)
+destroy(c::Ceed) = C.CeedDestroy(c.ref) # COV_EXCL_LINE
 Base.getindex(c::Ceed) = c.ref[]
 
 Base.show(io::IO, ::MIME"text/plain", c::Ceed) = ceed_show(io, c, C.CeedView)

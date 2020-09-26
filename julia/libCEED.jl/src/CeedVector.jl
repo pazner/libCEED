@@ -148,7 +148,7 @@ end
 # Helper function to parse arguments of @witharray and @witharray_read
 function witharray_parse(assignment, args)
     if !Meta.isexpr(assignment, :(=))
-        error("@witharray must have first argument of the form v_arr=v")
+        error("@witharray must have first argument of the form v_arr=v") # COV_EXCL_LINE
     end
     arr = assignment.args[1]
     v = assignment.args[2]
@@ -158,7 +158,7 @@ function witharray_parse(assignment, args)
     for i = 1:length(args)-1
         a = args[i]
         if !Meta.isexpr(a, :(=))
-            error("Incorrect call to @witharray or @witharray_read")
+            error("Incorrect call to @witharray or @witharray_read") # COV_EXCL_LINE
         end
         if a.args[1] == :mtype
             mtype = a.args[2]
@@ -230,7 +230,7 @@ Base.length(v::CeedVector) = length(Int, v)
 Sets the values of [`CeedVector`](@ref) `v` equal to those of `v2` using
 broadcasting.
 """
-Base.setindex!(v::CeedVector, v2::AbstractArray) = @witharray a = v a .= v2
+Base.setindex!(v::CeedVector, v2::AbstractArray) = @witharray(a = v, a .= v2)
 
 """
     CeedVector(c::Ceed, v2::AbstractVector)
@@ -250,7 +250,7 @@ Create a new `Vector` by copying the contents of `v`.
 """
 function Base.Vector(v::CeedVector)
     v2 = Vector{CeedScalar}(undef, length(v))
-    @witharray_read a = v v2 .= a
+    @witharray_read(a = v, v2 .= a)
 end
 
 """
