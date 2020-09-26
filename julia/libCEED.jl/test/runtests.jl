@@ -129,21 +129,21 @@ using Test, libCEED, LinearAlgebra, StaticArrays
         v1 = CeedVector(c, v)
         v2 = CeedVector(c, Q)
         apply!(id, Q, [v1], [v2])
-        @test @witharray(a=v2, a == v)
+        @test @witharray(a = v2, a == v)
 
-        @interior_qf id2 = (c, (a, :in, EVAL_INTERP), (b, :out, EVAL_INTERP), b .= a)
+        @interior_qf id2 = (c, (a, :in, EVAL_INTERP), (b, :out, EVAL_INTERP), b.=a)
         v2[] = 0.0
         apply!(id2, Q, [v1], [v2])
-        @test @witharray(a=v2, a == v)
+        @test @witharray(a = v2, a == v)
 
         dim = 3
         @interior_qf qf = (
             c,
-            dim = dim,
+            dim=dim,
             (a, :in, EVAL_GRAD, dim),
             (b, :in, EVAL_INTERP),
             (c, :out, EVAL_NONE),
-            nothing
+            nothing,
         )
         in_sz, out_sz = libCEED.get_field_sizes(qf)
         @test in_sz == [dim, 1]

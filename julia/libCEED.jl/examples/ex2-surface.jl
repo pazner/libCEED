@@ -84,7 +84,7 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
             (qdata, :out, EVAL_NONE, dim*(dim + 1)÷2),
             begin
                 Jinv = inv(J)
-                qdata .= setvoigt(w[]*det(J)*Jinv*Jinv')
+                qdata .= setvoigt(w*det(J)*Jinv*Jinv')
             end,
         )
     else

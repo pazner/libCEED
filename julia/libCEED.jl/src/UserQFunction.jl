@@ -52,10 +52,15 @@ function generate_user_qfunction(
             arrays,
             :($arr_name_gen = extract_array($ptr, $i_inout, (Int($Q), $(dims...)))),
         )
-        slice = Expr(:ref, arr_name_gen, idx, (:(:) for i = 1:length(dims))...)
+        ndims = length(dims)
+        slice = Expr(:ref, arr_name_gen, idx, (:(:) for i = 1:ndims)...)
         if i <= n_in
-            S = Tuple{dims...}
-            push!(array_views, :($arr_name = libCEED.SArray{$S}(@view $slice)))
+            if ndims == 0
+                push!(array_views, :($arr_name = $slice))
+            else
+                S = Tuple{dims...}
+                push!(array_views, :($arr_name = libCEED.SArray{$S}(@view $slice)))
+            end
         else
             push!(array_views, :($arr_name = @view $slice))
         end
