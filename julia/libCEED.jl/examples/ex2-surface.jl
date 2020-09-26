@@ -6,7 +6,7 @@ function transform_mesh_coords!(dim, mesh_size, mesh_coords)
     @witharray coords = mesh_coords begin
         @inbounds @simd for i = 1:mesh_size
             # map [0,1] to [0,1] varying the mesh density
-            coords[i] = 0.5 + 1.0 / sqrt(3.0) * sin((2.0 / 3.0) * pi * (coords[i] - 0.5))
+            coords[i] = 0.5 + 1.0/sqrt(3.0)*sin((2.0/3.0)*pi*(coords[i] - 0.5))
         end
     end
     exact_sa = (dim == 1 ? 2 : dim == 2 ? 4 : 6)
@@ -20,7 +20,7 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     prob_size = prob_size
 
     ncompx = dim
-    prob_size < 0 && (prob_size = 256 * 1024)
+    prob_size < 0 && (prob_size = 256*1024)
 
     mesh_order = max(mesh_order, sol_order)
     sol_order = mesh_order
@@ -50,7 +50,7 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
         dim,
         nxyz,
         sol_order,
-        div(dim * (dim + 1), 2),
+        div(dim*(dim + 1), 2),
         num_qpts,
         mode=StridedOnly,
     )
@@ -81,10 +81,10 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
             dim=dim,
             (J, :in, EVAL_GRAD, dim, dim),
             (w, :in, EVAL_WEIGHT),
-            (qdata, :out, EVAL_NONE, dim * (dim + 1) ÷ 2),
+            (qdata, :out, EVAL_NONE, dim*(dim + 1)÷2),
             begin
                 Jinv = inv(J)
-                qdata .= setvoigt(w[] * det(J) * Jinv * Jinv')
+                qdata .= setvoigt(w[]*det(J)*Jinv*Jinv')
             end,
         )
     else
@@ -106,7 +106,7 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     # Compute the quadrature data for the diffusion operator.
     elem_qpts = num_qpts^dim
     num_elem = prod(nxyz)
-    qdata = CeedVector(ceed, num_elem * elem_qpts * div(dim * (dim + 1), 2))
+    qdata = CeedVector(ceed, num_elem*elem_qpts*div(dim*(dim + 1), 2))
     print("Computing the quadrature data for the diffusion operator ...")
     flush(stdout)
     apply!(build_oper, mesh_coords, qdata)
@@ -118,11 +118,11 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
             ceed,
             dim=dim,
             (du, :in, EVAL_GRAD, dim),
-            (qdata, :in, EVAL_NONE, dim * (dim + 1) ÷ 2),
+            (qdata, :in, EVAL_NONE, dim*(dim + 1)÷2),
             (dv, :out, EVAL_GRAD, dim),
             begin
                 dXdxdXdxT = getvoigt(qdata)
-                dv .= dXdxdXdxT * du
+                dv .= dXdxdXdxT*du
             end,
         )
     else
@@ -151,7 +151,7 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     # Initialize 'u' with sum of coordinates, x+y+z.
     @witharray_read(
         x_host = mesh_coords,
-        size = (mesh_size ÷ dim, dim),
+        size = (mesh_size÷dim, dim),
         @witharray(u_host = u, size = (sol_size, 1), sum!(u_host, x_host))
     )
 

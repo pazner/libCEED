@@ -19,7 +19,7 @@ function generate_ceed_wrapper(ceed_path)
         output_file=joinpath(@__DIR__, "libceed_api_gen.jl"),
         common_file=joinpath(@__DIR__, "libceed_common_gen.jl"),
         clang_includes=[ceed_include, CLANG_INCLUDE],
-        clang_args=map(x -> "-I" * x, find_std_headers()),
+        clang_args=map(x -> "-I"*x, find_std_headers()),
         header_wrapped=(root, current) -> root == current,
         header_library=x -> "libceed",
         clang_diagnostics=true,

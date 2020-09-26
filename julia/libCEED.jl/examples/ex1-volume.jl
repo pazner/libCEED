@@ -7,23 +7,22 @@ function transform_mesh_coords!(dim, mesh_size, mesh_coords)
         if dim == 1
             for i = 1:mesh_size
                 # map [0,1] to [0,1] varying the mesh density
-                coords[i] =
-                    0.5 + 1.0 / sqrt(3.0) * sin((2.0 / 3.0) * pi * (coords[i] - 0.5))
+                coords[i] = 0.5 + 1.0/sqrt(3.0)*sin((2.0/3.0)*pi*(coords[i] - 0.5))
             end
             exact_volume = 1.0
         else
-            num_nodes = mesh_size ÷ dim
+            num_nodes = mesh_size÷dim
             @inbounds @simd for i = 1:num_nodes
                 # map (x,y) from [0,1]x[0,1] to the quarter annulus with polar
                 # coordinates, (r,phi) in [1,2]x[0,pi/2] with area = 3/4*pi
                 u = coords[i]
                 v = coords[i+num_nodes]
                 u = 1.0 + u
-                v = pi / 2 * v
-                coords[i] = u * cos(v)
-                coords[i+num_nodes] = u * sin(v)
+                v = pi/2*v
+                coords[i] = u*cos(v)
+                coords[i+num_nodes] = u*sin(v)
             end
-            exact_volume = 3.0 / 4.0 * pi
+            exact_volume = 3.0/4.0*pi
         end
         return exact_volume
     end
@@ -31,7 +30,7 @@ end
 
 function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, gallery)
     ncompx = dim
-    prob_size < 0 && (prob_size = 256 * 1024)
+    prob_size < 0 && (prob_size = 256*1024)
 
     ceed = Ceed(ceed_spec)
     mesh_basis =
@@ -74,7 +73,7 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
             (J, :in, EVAL_GRAD, dim, dim),
             (w, :in, EVAL_WEIGHT),
             (qdata, :out, EVAL_NONE),
-            qdata[]=w[] * det(J),
+            qdata[]=w[]*det(J),
         )
     else
         build_qfunc = create_interior_qfunction(ceed, "Mass$(dim)DBuild")
@@ -94,7 +93,7 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     # Compute the quadrature data for the mass operator.
     elem_qpts = num_qpts^dim
     num_elem = prod(nxyz)
-    qdata = CeedVector(ceed, num_elem * elem_qpts)
+    qdata = CeedVector(ceed, num_elem*elem_qpts)
 
     print("Computing the quadrature data for the mass operator ...")
     flush(stdout)
@@ -108,7 +107,7 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
             (u, :in, EVAL_INTERP),
             (qdata, :in, EVAL_NONE),
             (v, :out, EVAL_INTERP),
-            v[]=qdata[] * u[],
+            v[]=qdata[]*u[],
         )
     else
         apply_qfunc = create_interior_qfunction(ceed, "MassApply")

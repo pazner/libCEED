@@ -22,20 +22,20 @@ function f_build_mass_c(
     qdata = UnsafeArray(unsafe_load(out_ptr, 1), (Int(Q),))
     if ctx.dim == 1
         @inbounds @simd for i = 1:Q
-            qdata[i] = J[i] * w[i]
+            qdata[i] = J[i]*w[i]
         end
     elseif ctx.dim == 2
         @inbounds @simd for i = 1:Q
-            qdata[i] = (J[i, 1] * J[i, 4] - J[i, 2] * J[i, 3]) * w[i]
+            qdata[i] = (J[i, 1]*J[i, 4] - J[i, 2]*J[i, 3])*w[i]
         end
     elseif ctx.dim == 3
         @inbounds @simd for i = 1:Q
             qdata[i] =
                 (
-                    J[i, 1] * (J[i, 5] * J[i, 9] - J[i, 6] * J[i, 8]) -
-                    J[i, 2] * (J[i, 4] * J[i, 9] - J[i, 6] * J[i, 7]) +
-                    J[i, 3] * (J[i, 4] * J[i, 8] - J[i, 5] * J[i, 7])
-                ) * w[i]
+                    J[i, 1]*(J[i, 5]*J[i, 9] - J[i, 6]*J[i, 8]) -
+                    J[i, 2]*(J[i, 4]*J[i, 9] - J[i, 6]*J[i, 7]) +
+                    J[i, 3]*(J[i, 4]*J[i, 8] - J[i, 5]*J[i, 7])
+                )*w[i]
         end
     else
         error("Bad dimension")
@@ -54,7 +54,7 @@ function f_apply_mass_c(
     qdata = UnsafeArray(unsafe_load(in_ptr, 2), (Int(Q),))
     v = UnsafeArray(unsafe_load(out_ptr, 1), (Int(Q),))
     @inbounds @simd for i = 1:Q
-        v[i] = qdata[i] * u[i]
+        v[i] = qdata[i]*u[i]
     end
     return CeedInt(0)
 end
@@ -69,7 +69,7 @@ function get_cartesian_mesh_size_c(dim, order, prob_size)
         num_elem = div(num_elem, 2)
         s += 1
     end
-    r = s % dim
+    r = s%dim
     for d = 1:dim
         sd = div(s, dim)
         if r > 0
@@ -97,21 +97,21 @@ function build_cartesian_restriction_c(
     num_elem = 1
     scalar_size = 1
 
-    nd = p * nxyz .+ 1
+    nd = p*nxyz .+ 1
     num_elem = prod(nxyz)
     scalar_size = prod(nd)
-    size = scalar_size * ncomp
+    size = scalar_size*ncomp
 
     # elem:         0             1                 n-1
     #        |---*-...-*---|---*-...-*---|- ... -|--...--|
     # nnodes:   0   1    p-1  p  p+1       2*p             n*p
 
-    el_nodes = zeros(C.CeedInt, num_elem * nnodes)
+    el_nodes = zeros(C.CeedInt, num_elem*nnodes)
     exyz = zeros(Int, dim)
     @inbounds for e = 0:(num_elem-1)
         re = e
         for d = 1:dim
-            exyz[d] = re % nxyz[d]
+            exyz[d] = re%nxyz[d]
             re = div(re, nxyz[d])
         end
         for lnodes = 0:(nnodes-1)
@@ -119,7 +119,7 @@ function build_cartesian_restriction_c(
             gnodes_stride = 1
             rnodes = lnodes
             for d = 1:dim
-                gnodes += (exyz[d] * p + rnodes % pp1) * gnodes_stride
+                gnodes += (exyz[d]*p + rnodes%pp1)*gnodes_stride
                 gnodes_stride *= nd[d]
                 rnodes = div(rnodes, pp1)
             end
@@ -134,7 +134,7 @@ function build_cartesian_restriction_c(
         nnodes,
         ncomp,
         scalar_size,
-        ncomp * scalar_size,
+        ncomp*scalar_size,
         C.CEED_MEM_HOST,
         C.CEED_COPY_VALUES,
         el_nodes,
@@ -147,7 +147,7 @@ function build_cartesian_restriction_c(
             num_elem,
             elem_qpts,
             ncomp,
-            ncomp * elem_qpts * num_elem,
+            ncomp*elem_qpts*num_elem,
             C.CEED_STRIDES_BACKEND[],
             restr_i,
         )
@@ -159,23 +159,23 @@ end
 
 function set_cartesian_mesh_coords_c(dim, nxyz, mesh_order, mesh_coords)
     p = mesh_order
-    nd = p * nxyz .+ 1
+    nd = p*nxyz .+ 1
     num_elem = prod(nxyz)
     scalar_size = prod(nd)
 
     coords_ref = Ref{Ptr{C.CeedScalar}}()
     C.CeedVectorGetArray(mesh_coords[], C.CEED_MEM_HOST, coords_ref)
-    coords = unsafe_wrap(Array, coords_ref[], scalar_size * dim)
+    coords = unsafe_wrap(Array, coords_ref[], scalar_size*dim)
 
     nodes = zeros(C.CeedScalar, p + 1)
     # The H1 basis uses Lobatto quadrature points as nodes.
     C.CeedLobattoQuadrature(p + 1, nodes, C_NULL) # nodes are in [-1,1]
-    nodes = 0.5 .+ 0.5 * nodes
+    nodes = 0.5 .+ 0.5*nodes
     for gsnodes = 0:(scalar_size-1)
         rnodes = gsnodes
         for d = 1:dim
-            d1d = rnodes % nd[d]
-            coords[gsnodes+scalar_size*(d-1)+1] = (div(d1d, p) + nodes[d1d%p+1]) / nxyz[d]
+            d1d = rnodes%nd[d]
+            coords[gsnodes+scalar_size*(d-1)+1] = (div(d1d, p) + nodes[d1d%p+1])/nxyz[d]
             rnodes = div(rnodes, nd[d])
         end
     end
@@ -190,7 +190,7 @@ function transform_mesh_coords_c(dim, mesh_size, mesh_coords)
     if dim == 1
         for i = 1:mesh_size
             # map [0,1] to [0,1] varying the mesh density
-            coords[i] = 0.5 + 1.0 / sqrt(3.0) * sin((2.0 / 3.0) * pi * (coords[i] - 0.5))
+            coords[i] = 0.5 + 1.0/sqrt(3.0)*sin((2.0/3.0)*pi*(coords[i] - 0.5))
         end
         exact_volume = 1
     else
@@ -201,11 +201,11 @@ function transform_mesh_coords_c(dim, mesh_size, mesh_coords)
             u = coords[i]
             v = coords[i+num_nodes]
             u = 1.0 + u
-            v = pi / 2 * v
-            coords[i] = u * cos(v)
-            coords[i+num_nodes] = u * sin(v)
+            v = pi/2*v
+            coords[i] = u*cos(v)
+            coords[i+num_nodes] = u*sin(v)
         end
-        exact_volume = 3.0 / 4.0 * pi
+        exact_volume = 3.0/4.0*pi
     end
 
     C.CeedVectorRestoreArray(mesh_coords[], coords_ref)
@@ -214,7 +214,7 @@ end
 
 function run_ex1_c(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
     ncompx = dim
-    prob_size < 0 && (prob_size = 256 * 1024)
+    prob_size < 0 && (prob_size = 256*1024)
 
     gallery = false
 
@@ -292,7 +292,7 @@ function run_ex1_c(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
         )
         # This creates the QFunction directly.
         C.CeedQFunctionCreateInterior(ceed[], 1, qf_build_mass, "julia", build_qfunc)
-        C.CeedQFunctionAddInput(build_qfunc[], "dx", ncompx * dim, C.CEED_EVAL_GRAD)
+        C.CeedQFunctionAddInput(build_qfunc[], "dx", ncompx*dim, C.CEED_EVAL_GRAD)
         C.CeedQFunctionAddInput(build_qfunc[], "weights", 1, C.CEED_EVAL_WEIGHT)
         C.CeedQFunctionAddOutput(build_qfunc[], "qdata", 1, C.CEED_EVAL_NONE)
         C.CeedQFunctionSetContext(build_qfunc[], qf_ctx[])
@@ -337,7 +337,7 @@ function run_ex1_c(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
     qdata = Ref{C.CeedVector}()
     elem_qpts = num_qpts^dim
     num_elem = prod(nxyz)
-    C.CeedVectorCreate(ceed[], num_elem * elem_qpts, qdata)
+    C.CeedVectorCreate(ceed[], num_elem*elem_qpts, qdata)
 
     print("Computing the quadrature data for the mass operator ...")
     flush(stdout)

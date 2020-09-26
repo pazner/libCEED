@@ -15,7 +15,7 @@ struct CeedDim{dim} end
 Specialized determinant calculations for matrices of size 1, 2, or 3.
 """
 @inline det(J, ::CeedDim{1}) = @inbounds J[1]
-@inline det(J, ::CeedDim{2}) = @inbounds J[1] * J[4] - J[3] * J[2]
+@inline det(J, ::CeedDim{2}) = @inbounds J[1]*J[4] - J[3]*J[2]
 #! format: off
 @inline det(J, ::CeedDim{3}) = @inbounds (
     J[1]*(J[5]*J[9] - J[6]*J[8]) -

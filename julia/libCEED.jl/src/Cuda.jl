@@ -29,7 +29,7 @@ function generate_kernel(qf_name, kf, dims_in, dims_out)
             for j = 1:$(input_sz[i])
                 $(f_ins[i])[j] = unsafe_load(
                     libCEED.CUDA.DevicePtr(libCEED.CuPtr{CeedScalar}(fields.inputs[$i])),
-                    q + (j - 1) * Q,
+                    q + (j - 1)*Q,
                     a,
                 )
             end
@@ -42,7 +42,7 @@ function generate_kernel(qf_name, kf, dims_in, dims_out)
                 unsafe_store!(
                     libCEED.CUDA.DevicePtr(libCEED.CuPtr{CeedScalar}(fields.outputs[$i])),
                     $(f_outs[i])[j],
-                    q + (j - 1) * Q,
+                    q + (j - 1)*Q,
                     a,
                 )
             end
@@ -58,7 +58,7 @@ function generate_kernel(qf_name, kf, dims_in, dims_out)
             bd = libCEED.blockDim()
             ti = libCEED.threadIdx()
 
-            inc = bd.x * gd.x
+            inc = bd.x*gd.x
 
             $(def_ins...)
             $(def_outs...)

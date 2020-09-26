@@ -79,11 +79,11 @@ using Test, libCEED, LinearAlgebra, StaticArrays
 
         q1d, w1d = lobatto_quadrature(3, AbscissaAndWeights)
         @test q1d ≈ [-1.0, 0.0, 1.0]
-        @test w1d ≈ [1 / 3, 4 / 3, 1 / 3]
+        @test w1d ≈ [1/3, 4/3, 1/3]
 
         q1d, w1d = gauss_quadrature(3)
-        @test q1d ≈ [-sqrt(3 / 5), 0.0, sqrt(3 / 5)]
-        @test w1d ≈ [5 / 9, 8 / 9, 5 / 9]
+        @test q1d ≈ [-sqrt(3/5), 0.0, sqrt(3/5)]
+        @test w1d ≈ [5/9, 8/9, 5/9]
 
         @test BasisCollocated()[] == libCEED.C.CEED_BASIS_COLLOCATED[]
     end
@@ -101,7 +101,7 @@ using Test, libCEED, LinearAlgebra, StaticArrays
             J = J + J' # make symmetric
             @test setvoigt(SMatrix{dim,dim}(J)) == setvoigt(J, D)
             @test getvoigt(setvoigt(J, D), D) == J
-            V = zeros(dim * (dim + 1) ÷ 2)
+            V = zeros(dim*(dim + 1)÷2)
             setvoigt!(V, J, D)
             @test V == setvoigt(J, D)
             J2 = zeros(dim, dim)
