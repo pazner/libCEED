@@ -21,11 +21,12 @@ mutable struct Basis <: AbstractBasis
         obj = new(ref)
         finalizer(obj) do x
             # ccall(:jl_safe_printf, Cvoid, (Cstring, Cstring), "Finalizing %s.\n", repr(x))
-            C.CeedBasisDestroy(x.ref)
+            destroy(x)
         end
         return obj
     end
 end
+destroy(b::Basis) = C.CeedBasisDestroy(b.ref) # COV_EXCL_LINE
 Base.getindex(b::Basis) = b.ref[]
 Base.show(io::IO, ::MIME"text/plain", b::Basis) = ceed_show(io, b, C.CeedBasisView)
 

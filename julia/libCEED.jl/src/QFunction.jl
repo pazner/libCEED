@@ -26,7 +26,7 @@ mutable struct QFunction <: AbstractQFunction
     end
 end
 QFunction(ref::Ref{C.CeedQFunction}) = QFunction(ref, nothing)
-destroy(qf::QFunction) = C.CeedQFunctionDestroy(qf.ref)
+destroy(qf::QFunction) = C.CeedQFunctionDestroy(qf.ref) # COV_EXCL_LINE
 Base.getindex(qf::QFunction) = qf.ref[]
 Base.show(io::IO, ::MIME"text/plain", qf::QFunction) =
     ceed_show(io, qf, C.CeedQFunctionView)
@@ -37,7 +37,7 @@ function create_interior_qfunction(c::Ceed, f::UserQFunction; vlength=1)
     # no C source for this Q-function
     C.CeedQFunctionCreateInterior(c[], vlength, f.fptr, "", ref)
     if !isnothing(f.cuf)
-        C.CeedQFunctionSetCUDAUserFunction(ref[], f.cuf.fun.handle)
+        C.CeedQFunctionSetCUDAUserFunction(ref[], f.cuf.fun.handle) # COV_EXCL_LINE
     end
     QFunction(ref, f)
 end
@@ -52,13 +52,13 @@ name.
 
 - Build and apply the 3D mass operator
 ```
-build_mass_qf = create_interior_qfunction(c, "Build3DMass")
-apply_mass_qf = create_interior_qfunction(c, "Apply3DMass")
+build_mass_qf = create_interior_qfunction(c, "Mass3DBuild")
+apply_mass_qf = create_interior_qfunction(c, "MassApply")
 ```
 - Build and apply the 3D Poisson operator
 ```
-build_poi_qf = create_interior_qfunction(c, "Build3DPoisson")
-apply_poi_qf = create_interior_qfunction(c, "Apply3DPoisson")
+build_poi_qf = create_interior_qfunction(c, "Poisson3DBuild")
+apply_poi_qf = create_interior_qfunction(c, "Poisson3DApply")
 ```
 """
 function create_interior_qfunction(c::Ceed, name::AbstractString)

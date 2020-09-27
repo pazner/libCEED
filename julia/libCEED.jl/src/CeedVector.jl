@@ -28,7 +28,7 @@ function CeedVector(c::Ceed, len::Integer)
     end
     return obj
 end
-destroy(v::CeedVector) = C.CeedVectorDestroy(v.ref)
+destroy(v::CeedVector) = C.CeedVectorDestroy(v.ref) # COV_EXCL_LINE
 Base.getindex(v::CeedVector) = v.ref[]
 
 Base.summary(io::IO, v::CeedVector) = print(io, length(v), "-element CeedVector")

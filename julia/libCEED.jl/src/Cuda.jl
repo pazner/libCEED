@@ -1,3 +1,4 @@
+# COV_EXCL_START
 struct FieldsCuda
     inputs::NTuple{16,Int}
     outputs::NTuple{16,Int}
@@ -89,3 +90,4 @@ function mk_cufunction(ceed, def_module, qf_name, kf, dims_in, dims_out)
     tt = Tuple{Ptr{Nothing},Int32,FieldsCuda}
     cufunction(k_fn, tt; maxregs=64)
 end
+# COV_EXCL_STOP
