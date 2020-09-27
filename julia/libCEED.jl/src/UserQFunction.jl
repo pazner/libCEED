@@ -5,10 +5,6 @@ struct UserQFunction{F,K}
     cuf::Union{Nothing,CUDA.HostKernel}
 end
 
-function UserQFunction(ceed::Ceed, f, kf, cuf)
-    UserQFunction(f, kf, fptr, cuf)
-end
-
 @inline function extract_context(ptr, ::Type{T}) where {T}
     unsafe_load(Ptr{T}(ptr))
 end
@@ -17,7 +13,6 @@ end
     UnsafeArray(Ptr{CeedScalar}(unsafe_load(ptr, idx)), dims)
 end
 
-# TODO: escape ctx_ptr
 function generate_user_qfunction(
     ceed,
     def_module,
@@ -29,41 +24,45 @@ function generate_user_qfunction(
     dims_out,
     body,
 )
-    const_assignments = []
-    for c ∈ constants
-        push!(const_assignments, :($(c[1]) = $(c[2])))
-    end
-
     idx = gensym(:i)
     Q = gensym(:Q)
+    ctx_ptr = gensym(:ctx_ptr)
     in_ptr = gensym(:in_ptr)
     out_ptr = gensym(:out_ptr)
 
-    arrays = []
-    array_views = []
+    const_assignments = Vector{Expr}(undef, length(constants))
+    for (i, c) ∈ enumerate(constants)
+        const_assignments[i] = :($(c[1]) = $(c[2]))
+    end
+
+    narrays = length(array_names)
+    arrays = Vector{Expr}(undef, narrays)
+    array_views = Vector{Expr}(undef, narrays)
     n_in = length(dims_in)
-    for i = 1:length(array_names)
-        arr_name = array_names[i]
+    for (i, arr_name) ∈ enumerate(array_names)
         i_inout = (i <= n_in) ? i : i - n_in
         dims = (i <= n_in) ? dims_in[i] : dims_out[i-n_in]
         ptr = (i <= n_in) ? in_ptr : out_ptr
         arr_name_gen = gensym(arr_name)
-        push!(
-            arrays,
-            :($arr_name_gen = extract_array($ptr, $i_inout, (Int($Q), $(dims...)))),
-        )
+        arrays[i] = :($arr_name_gen = extract_array($ptr, $i_inout, (Int($Q), $(dims...))))
         ndims = length(dims)
         slice = Expr(:ref, arr_name_gen, idx, (:(:) for i = 1:ndims)...)
         if i <= n_in
             if ndims == 0
-                push!(array_views, :($arr_name = $slice))
+                array_views[i] = :($arr_name = $slice)
             else
                 S = Tuple{dims...}
-                push!(array_views, :($arr_name = libCEED.SArray{$S}(@view $slice)))
+                array_views[i] = :($arr_name = libCEED.SArray{$S}(@view $slice))
             end
         else
-            push!(array_views, :($arr_name = @view $slice))
+            array_views[i] = :($arr_name = @view $slice)
         end
+    end
+
+    if isnothing(ctx)
+        ctx_assignment = nothing
+    else
+        ctx_assignment = :($(ctx.name) = extract_context($ctx_ptr, $(ctx.type)))
     end
 
     qf1 = gensym(qf_name)
@@ -71,13 +70,13 @@ function generate_user_qfunction(
         def_module,
         quote
             @inline function $qf1(
-                ctx_ptr::Ptr{Cvoid},
+                $ctx_ptr::Ptr{Cvoid},
                 $Q::CeedInt,
                 $in_ptr::Ptr{Ptr{CeedScalar}},
                 $out_ptr::Ptr{Ptr{CeedScalar}},
             )
                 $(const_assignments...)
-                $ctx
+                $ctx_assignment
                 $(arrays...)
                 @inbounds @simd for $idx = 1:$Q
                     $(array_views...)
@@ -96,9 +95,9 @@ function generate_user_qfunction(
     kf = Core.eval(
         def_module,
         quote
-            @inline function $qf2(ctx_ptr::Ptr{Cvoid}, $Q::CeedInt, $(array_names...))
+            @inline function $qf2($ctx_ptr::Ptr{Cvoid}, $Q::CeedInt, $(array_names...))
                 $(const_assignments...)
-                $ctx
+                $ctx_assignment
                 $body
                 nothing
             end
@@ -112,13 +111,10 @@ end
 function meta_user_qfunction(ceed, def_module, qf, args)
     qf_name = Meta.quot(qf)
 
-    body = nothing
     ctx = nothing
-    constants = []
-    arrays = []
-    array_views = []
-    dims_in = []
-    dims_out = []
+    constants = Expr[]
+    dims_in = Expr[]
+    dims_out = Expr[]
     names_in = Symbol[]
     names_out = Symbol[]
 
@@ -146,23 +142,20 @@ function meta_user_qfunction(ceed, def_module, qf, args)
                 error("Array specification must be either :in or :out. Given $inout.")
             end
         elseif Meta.isexpr(a, :(::))
-            ctx_name = a.args[1]
-            ctx_type = a.args[2]
-            ctx = Meta.quot(:($ctx_name = extract_context(ctx_ptr, $ctx_type)))
+            ctx = (name=a.args[1], type=a.args[2])
         else
             error("Bad argument to @user_qfunction")
         end
     end
 
     body = Meta.quot(args[end])
-    arr_names = [names_in; names_out]
 
     return :(generate_user_qfunction(
         $ceed,
         $def_module,
         $qf_name,
         [$(constants...)],
-        $arr_names,
+        $([names_in; names_out]),
         $ctx,
         [$(dims_in...)],
         [$(dims_out...)],
@@ -232,14 +225,14 @@ macro interior_qf(args)
     args = args.args[2].args
     ceed = esc(args[1])
 
-    fields_in = []
-    fields_out = []
+    # Calculate field sizes
+    fields_in = Expr[]
+    fields_out = Expr[]
     for a ∈ args
         if Meta.isexpr(a, :tuple)
             field_name = String(a.args[1])
             inout = a.args[2].value
             evalmode = a.args[3]
-            # Skip first dim (num qpts)
             ndim = length(a.args) - 3
             dims = Vector{Expr}(undef, ndim)
             for d = 1:ndim
