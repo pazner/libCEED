@@ -847,8 +847,9 @@ int CeedDestroy(Ceed *ceed) {
 }
 
 // LCOV_EXCL_START
-void CeedErrorFormat(Ceed ceed, const char *format, va_list *args) {
+const char *CeedErrorFormat(Ceed ceed, const char *format, va_list *args) {
   vsnprintf(ceed->errmsg, CEED_MAX_RESOURCE_LEN, format, *args);
+  return ceed->errmsg;
 }
 // LCOV_EXCL_STOP
 

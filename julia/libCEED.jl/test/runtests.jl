@@ -8,7 +8,7 @@ using Test, libCEED, LinearAlgebra, StaticArrays
         @test getresource(c) == res
         @test !iscuda(c)
         @test get_preferred_memtype(c) == MEM_HOST
-
+        @test_throws libCEED.CeedError create_interior_qfunction(c, "")
         io = IOBuffer()
         show(io, MIME("text/plain"), c)
         @test String(take!(io)) == """

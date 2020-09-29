@@ -1,3 +1,40 @@
+struct CeedError <: Exception
+    fname::String
+    lineno::Int
+    func::String
+    ecode::Int
+    message::String
+end
+
+function Base.showerror(io::IO, e::CeedError)
+    println(io, "libCEED error code ", e.ecode, " in ", e.func)
+    println(io, e.fname, ':', e.lineno, '\n')
+    println(io, e.message)
+end
+
+function handle_ceed_error(
+    ceed::C.Ceed,
+    c_fname::Cstring,
+    lineno::Cint,
+    c_func::Cstring,
+    ecode::Cint,
+    c_format::Cstring,
+    args::Ptr{Cvoid},
+)
+    c_message = ccall(
+        (:CeedErrorFormat, C.libceed),
+        Cstring,
+        (C.Ceed, Cstring, Ptr{Cvoid}),
+        ceed,
+        c_format,
+        args,
+    )
+    fname = unsafe_string(c_fname)
+    func = unsafe_string(c_func)
+    message = unsafe_string(c_message)
+    throw(CeedError(fname, lineno, func, ecode, message))
+end
+
 mutable struct Ceed
     ref::Ref{C.Ceed}
 end
@@ -11,6 +48,12 @@ string.
 function Ceed(spec::AbstractString="/cpu/self")
     obj = Ceed(Ref{C.Ceed}())
     C.CeedInit(spec, obj.ref)
+    ehandler = @cfunction(
+        handle_ceed_error,
+        Cint,
+        (C.Ceed, Cstring, Cint, Cstring, Cint, Cstring, Ptr{Cvoid})
+    )
+    C.CeedSetErrorHandler(obj.ref[], ehandler)
     finalizer(obj) do x
         # ccall(:jl_safe_printf, Cvoid, (Cstring, Cstring), "Finalizing %s.\n", repr(x))
         destroy(x)

@@ -22,6 +22,22 @@ function CeedDestroy(ceed)
     ccall((:CeedDestroy, libceed), Cint, (Ptr{Ceed},), ceed)
 end
 
+function CeedErrorReturn(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+    ccall((:CeedErrorReturn, libceed), Cint, (Ceed, Cstring, Cint, Cstring, Cint, Cstring, Ptr{Cvoid}), arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+end
+
+function CeedErrorStore(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+    ccall((:CeedErrorStore, libceed), Cint, (Ceed, Cstring, Cint, Cstring, Cint, Cstring, Ptr{Cvoid}), arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+end
+
+function CeedErrorAbort(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+    ccall((:CeedErrorAbort, libceed), Cint, (Ceed, Cstring, Cint, Cstring, Cint, Cstring, Ptr{Cvoid}), arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+end
+
+function CeedErrorExit(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+    ccall((:CeedErrorExit, libceed), Cint, (Ceed, Cstring, Cint, Cstring, Cint, Cstring, Ptr{Cvoid}), arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+end
+
 function CeedSetErrorHandler(ceed, eh)
     ccall((:CeedSetErrorHandler, libceed), Cint, (Ceed, Ptr{Cvoid}), ceed, eh)
 end
