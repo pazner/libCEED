@@ -15,15 +15,19 @@ coverage:
     project:
       default: off
       interface:
-        flags: interface
+        flags:
+          - interface
       backends:
-        flags: backends
+        flags:
+          - backends
     patch:
       default: off
       interface:
-        flags: interface
+        flags:
+          - interface
       backends:
-        flags: backends
+        flags:
+          - backends
 
 flags:
   interface:
