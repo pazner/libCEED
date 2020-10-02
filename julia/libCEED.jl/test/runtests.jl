@@ -89,16 +89,16 @@ end
         ncomp = 1
         p = 4
         q = 6
-        b = create_tensor_h1_lagrange_basis(c, dim, ncomp, p, q, GAUSS_LOBATTO)
+        b1 = create_tensor_h1_lagrange_basis(c, dim, ncomp, p, q, GAUSS_LOBATTO)
 
-        @test showstr(b) == getoutput("basis.out")
-        @test getdimension(b) == 3
-        @test gettopology(b) == HEX
-        @test getnumcomponents(b) == ncomp
-        @test getnumnodes(b) == p^dim
-        @test getnumnodes1d(b) == p
-        @test getnumqpts(b) == q^dim
-        @test getnumqpts1d(b) == q
+        @test showstr(b1) == getoutput("b1.out")
+        @test getdimension(b1) == 3
+        @test gettopology(b1) == HEX
+        @test getnumcomponents(b1) == ncomp
+        @test getnumnodes(b1) == p^dim
+        @test getnumnodes1d(b1) == p
+        @test getnumqpts(b1) == q^dim
+        @test getnumqpts1d(b1) == q
 
         q1d, w1d = lobatto_quadrature(3, AbscissaAndWeights)
         @test q1d ≈ [-1.0, 0.0, 1.0]
@@ -107,6 +107,24 @@ end
         q1d, w1d = gauss_quadrature(3)
         @test q1d ≈ [-sqrt(3/5), 0.0, sqrt(3/5)]
         @test w1d ≈ [5/9, 8/9, 5/9]
+
+        b1d = [1.0 0.0 ; 0.5 0.5 ; 0.0 1.0]
+        d1d = [-0.5 0.5 ; -0.5 0.5 ; -0.5 0.5]
+        q1d = [-1.0, 0.0, 1.0]
+        w1d = [1/3, 4/3, 1/3]
+        q,p = size(b1d)
+
+        b2 = create_tensor_h1_basis(c, dim, 1, p, q, b1d, d1d, q1d, w1d)
+        @test showstr(b2) == getoutput("b2.out")
+
+        b3 = create_h1_basis(c, LINE, 1, p, q, b1d, reshape(d1d, 1, q, p), q1d, w1d)
+        @test showstr(b3) == getoutput("b3.out")
+
+        v = rand(2)
+        vq = apply(c, b3, v)
+        vd = apply(c, b3, v; emode=EVAL_GRAD)
+        @test vq ≈ b1d*v
+        @test vd ≈ d1d*v
 
         @test BasisCollocated()[] == libCEED.C.CEED_BASIS_COLLOCATED[]
     end

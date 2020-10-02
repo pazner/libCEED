@@ -83,8 +83,8 @@ function create_tensor_h1_basis(
     qref1d,
     qweight1d,
 )
-    @assert size(interp1d) == (p, q)
-    @assert size(grad1d) == (p, q)
+    @assert size(interp1d) == (q, p)
+    @assert size(grad1d) == (q, p)
     @assert length(qref1d) == q
     @assert length(qweight1d) == q
 
@@ -139,6 +139,7 @@ function create_h1_basis(
     qref,
     qweight,
 )
+    dim = getdimension(topo)
     @assert size(interp) == (nqpts, nnodes)
     @assert size(grad) == (dim, nqpts, nnodes)
     @assert length(qref) == nqpts
@@ -234,6 +235,15 @@ function getdimension(b::Basis)
     dim = Ref{CeedInt}()
     C.CeedBasisGetDimension(b[], dim)
     dim[]
+end
+
+"""
+    getdimension(t::Topology)
+
+Return the spatial dimension of the given [`Topology`](@ref).
+"""
+function getdimension(t::Topology)
+    return Int(t) >> 16
 end
 
 """
