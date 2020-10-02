@@ -54,5 +54,3 @@ function set_data!(ctx::Context, mtype, cmode::CopyMode, data)
         pointer_from_objref(data),
     )
 end
-
-Base.setindex!(ctx::Context, data) = set_data!(ctx, MEM_HOST, USE_POINTER, data)

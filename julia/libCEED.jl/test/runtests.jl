@@ -1,5 +1,14 @@
 using Test, libCEED, LinearAlgebra, StaticArrays
 
+function iostr(f, x)
+    io = IOBuffer()
+    f(io, x)
+    String(take!(io))
+end
+showstr(x) = iostr(x) do io,x show(io, MIME("text/plain"), x) end
+summarystr(x) = iostr(summary, x)
+getoutput(fname) = chomp(read(joinpath(@__DIR__, "output", fname), String))
+
 @testset "libCEED" begin
     @testset "Ceed" begin
         res = "/cpu/self/ref/serial"
@@ -9,9 +18,7 @@ using Test, libCEED, LinearAlgebra, StaticArrays
         @test !iscuda(c)
         @test get_preferred_memtype(c) == MEM_HOST
         @test_throws libCEED.CeedError create_interior_qfunction(c, "")
-        io = IOBuffer()
-        show(io, MIME("text/plain"), c)
-        @test String(take!(io)) == """
+        @test showstr(c) == """
             Ceed
               Ceed Resource: $res
               Preferred MemType: host"""
@@ -21,9 +28,7 @@ using Test, libCEED, LinearAlgebra, StaticArrays
         c = Ceed()
         data = zeros(3)
         ctx = Context(c, data)
-        io = IOBuffer()
-        show(io, MIME("text/plain"), ctx)
-        @test String(take!(io)) == """
+        @test showstr(ctx) == """
             CeedQFunctionContext
               Context Data Size: $(sizeof(data))"""
         @test_throws Exception set_data!(ctx, MEM_HOST, OWN_POINTER, data)
@@ -60,15 +65,14 @@ using Test, libCEED, LinearAlgebra, StaticArrays
         @test CeedVectorActive()[] == libCEED.C.CEED_VECTOR_ACTIVE[]
         @test CeedVectorNone()[] == libCEED.C.CEED_VECTOR_NONE[]
 
+        @test summarystr(v) == "$n-element CeedVector"
         io = IOBuffer()
-        summary(io, v)
-        @test String(take!(io)) == "$n-element CeedVector"
         summary(io, v)
         println(io, ":")
         @witharray_read(a = v, Base.print_array(io, a))
         s1 = String(take!(io))
         show(io, MIME("text/plain"), v)
-        @test s1 == String(take!(io))
+        @test showstr(v) == String(take!(io))
     end
 
     @testset "Basis" begin
@@ -79,6 +83,7 @@ using Test, libCEED, LinearAlgebra, StaticArrays
         q = 6
         b = create_tensor_h1_lagrange_basis(c, dim, ncomp, p, q, GAUSS_LOBATTO)
 
+        @test showstr(b) == getoutput("basis.out")
         @test getdimension(b) == 3
         @test gettopology(b) == HEX
         @test getnumcomponents(b) == ncomp
@@ -131,9 +136,7 @@ using Test, libCEED, LinearAlgebra, StaticArrays
         apply!(id, Q, [v1], [v2])
         @test @witharray(a = v2, a == v)
 
-        io = IOBuffer()
-        show(io, MIME("text/plain"), create_interior_qfunction(c, "Poisson3DApply"))
-        @test String(take!(io)) == """
+        @test showstr(create_interior_qfunction(c, "Poisson3DApply")) == """
             Gallery CeedQFunction Poisson3DApply
               2 Input Fields:
                 Input Field [0]:
@@ -185,9 +188,7 @@ using Test, libCEED, LinearAlgebra, StaticArrays
                 (:output, r, b, CeedVectorActive()),
             ],
         )
-        io = IOBuffer()
-        show(io, MIME("text/plain"), op)
-        @test String(take!(io)) == """
+        @test showstr(op) == """
             CeedOperator
               2 Fields
               1 Input Field:
@@ -211,19 +212,18 @@ using Test, libCEED, LinearAlgebra, StaticArrays
         n = 10
         offsets = Vector{CeedInt}(0:n-1)
         r = create_elem_restriction(c, 1, n, 1, 1, n, offsets)
-        io = IOBuffer()
-        show(io, MIME("text/plain"), r)
-        @test String(take!(io)) == string(
+        @test showstr(r) == string(
             "CeedElemRestriction from (10, 1) to 1 elements ",
             "with 10 nodes each and component stride 1",
         )
 
         strides = CeedInt[1, n, n]
         rs = create_elem_restriction_strided(c, 1, n, 1, n, strides)
-        show(io, MIME("text/plain"), rs)
-        @test String(take!(io)) == string(
+        @test showstr(rs) == string(
             "CeedElemRestriction from (10, 1) to 1 elements ",
             "with 10 nodes each and strides [1, $n, $n]",
         )
+
+        @test ElemRestrictionNone()[] == libCEED.C.CEED_ELEMRESTRICTION_NONE[]
     end
 end

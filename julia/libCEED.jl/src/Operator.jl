@@ -88,6 +88,7 @@ function apply!(
     try
         C.CeedOperatorApply(op[], vin[], vout[], request[])
     catch e
+        # COV_EXCL_START
         # Cannot recover from exceptions in operator apply
         printstyled(stderr, "libCEED.jl: "; color=:light_red, bold=true)
         printstyled(stderr, "error occurred when applying operator.\n", color=:light_red)
@@ -99,5 +100,6 @@ function apply!(
         Base.display_error(stderr, Base.catch_stack())
         # Exit without running atexit hooks or finalizers
         ccall(:exit, Cvoid, (Cint,), 1)
+        # COV_EXCL_STOP
     end
 end
