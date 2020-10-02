@@ -108,11 +108,11 @@ end
         @test q1d ≈ [-sqrt(3/5), 0.0, sqrt(3/5)]
         @test w1d ≈ [5/9, 8/9, 5/9]
 
-        b1d = [1.0 0.0 ; 0.5 0.5 ; 0.0 1.0]
-        d1d = [-0.5 0.5 ; -0.5 0.5 ; -0.5 0.5]
+        b1d = [1.0 0.0; 0.5 0.5; 0.0 1.0]
+        d1d = [-0.5 0.5; -0.5 0.5; -0.5 0.5]
         q1d = [-1.0, 0.0, 1.0]
         w1d = [1/3, 4/3, 1/3]
-        q,p = size(b1d)
+        q, p = size(b1d)
 
         b2 = create_tensor_h1_basis(c, dim, 1, p, q, b1d, d1d, q1d, w1d)
         @test showstr(b2) == getoutput("b2.out")
