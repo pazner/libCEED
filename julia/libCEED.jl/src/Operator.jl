@@ -12,7 +12,7 @@ mutable struct Operator
         return obj
     end
 end
-destroy(op::Operator) = C.CeedOperatorDestroy(op.ref)
+destroy(op::Operator) = C.CeedOperatorDestroy(op.ref) # COV_EXCL_LINE
 Base.getindex(op::Operator) = op.ref[]
 Base.show(io::IO, ::MIME"text/plain", op::Operator) = ceed_show(io, op, C.CeedOperatorView)
 
@@ -89,8 +89,13 @@ function apply!(
         C.CeedOperatorApply(op[], vin[], vout[], request[])
     catch e
         # Cannot recover from exceptions in operator apply
-        printstyled(stderr, "libCEED.jl: "; color=:red, bold=true)
-        println("error occurred when applying operator")
+        printstyled(stderr, "libCEED.jl: "; color=:light_red, bold=true)
+        printstyled(stderr, "error occurred when applying operator.\n", color=:light_red)
+        printstyled(
+            stderr,
+            "Cannot recover from error during operator application. Exiting.\n\n",
+            color=:light_red,
+        )
         Base.display_error(stderr, Base.catch_stack())
         # Exit without running atexit hooks or finalizers
         ccall(:exit, Cvoid, (Cint,), 1)

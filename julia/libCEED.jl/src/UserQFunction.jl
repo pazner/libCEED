@@ -217,7 +217,7 @@ Q-point) then `dims` should be omitted.
 """
 macro interior_qf(args)
     if !Meta.isexpr(args, :(=))
-        error("@interior_qf must be of form `qf = (body)`")
+        error("@interior_qf must be of form `qf = (body)`") # COV_EXCL_LINE
     end
 
     qf = args.args[1]

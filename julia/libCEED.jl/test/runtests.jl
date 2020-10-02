@@ -169,4 +169,40 @@ using Test, libCEED, LinearAlgebra, StaticArrays
         @test out_sz == [1]
         @test QFunctionNone()[] == libCEED.C.CEED_QFUNCTION_NONE[]
     end
+
+    @testset "Operator" begin
+        c = Ceed()
+        id = create_identity_qfunction(c, 1, EVAL_INTERP, EVAL_INTERP)
+        b = create_tensor_h1_lagrange_basis(c, 3, 1, 3, 3, GAUSS_LOBATTO)
+        n = getnumnodes(b)
+        offsets = Vector{CeedInt}(0:n-1)
+        er = create_elem_restriction(c, 1, n, 1, 1, n, MEM_HOST, COPY_VALUES, offsets)
+        op = Operator(
+            c;
+            qf=id,
+            fields=[
+                (:input, er, b, CeedVectorActive()),
+                (:output, er, b, CeedVectorActive()),
+            ],
+        )
+        io = IOBuffer()
+        show(io, MIME("text/plain"), op)
+        @test String(take!(io)) == """
+            CeedOperator
+              2 Fields
+              1 Input Field:
+                Input Field [0]:
+                  Name: "input"
+                  Active vector
+              1 Output Field:
+                Output Field [0]:
+                  Name: "output"
+                  Active vector"""
+
+        v = rand(n)
+        v1 = CeedVector(c, v)
+        v2 = CeedVector(c, n)
+        apply!(op, v1, v2)
+        @test @witharray_read(a1 = v1, @witharray_read(a2 = v2, a1 == a2))
+    end
 end

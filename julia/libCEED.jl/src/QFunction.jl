@@ -64,7 +64,7 @@ apply_poi_qf = create_interior_qfunction(c, "Poisson3DApply")
 function create_interior_qfunction(c::Ceed, name::AbstractString)
     ref = Ref{C.CeedQFunction}()
     C.CeedQFunctionCreateInteriorByName(c.ref[], name, ref)
-    QFunction(ref, nothing)
+    QFunction(ref)
 end
 
 """
@@ -80,7 +80,7 @@ input data to output fields by using the same memory location for both.
 function create_identity_qfunction(c::Ceed, size, inmode::EvalMode, outmode::EvalMode)
     ref = Ref{C.CeedQFunction}()
     C.CeedQFunctionCreateIdentity(c[], size, inmode, outmode, ref)
-    QFunction(ref, nothing)
+    QFunction(ref)
 end
 
 function add_input!(qf::AbstractQFunction, name::AbstractString, size, emode)

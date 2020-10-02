@@ -6,11 +6,13 @@ struct CeedError <: Exception
     message::String
 end
 
+# COV_EXCL_START
 function Base.showerror(io::IO, e::CeedError)
     println(io, "libCEED error code ", e.ecode, " in ", e.func)
     println(io, e.fname, ':', e.lineno, '\n')
     println(io, e.message)
 end
+# COV_EXCL_STOP
 
 function handle_ceed_error(
     ceed::C.Ceed,
