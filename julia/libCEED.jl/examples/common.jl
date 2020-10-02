@@ -83,8 +83,6 @@ function build_cartesian_restriction(
             ncomp,
             scalar_size,
             ncomp*scalar_size,
-            MEM_HOST,
-            COPY_VALUES,
             el_nodes,
         ) :
         nothing

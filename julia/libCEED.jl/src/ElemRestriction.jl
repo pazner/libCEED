@@ -21,17 +21,28 @@ mutable struct ElemRestriction <: AbstractElemRestriction
         obj = new(ref)
         finalizer(obj) do x
             # ccall(:jl_safe_printf, Cvoid, (Cstring, Cstring), "Finalizing %s.\n", repr(x))
-            C.CeedElemRestrictionDestroy(x.ref)
+            destroy(x)
         end
         return obj
     end
 end
+destroy(r::ElemRestriction) = C.CeedElemRestrictionDestroy(r.ref) # COV_EXCL_LINE
 Base.getindex(r::ElemRestriction) = r.ref[]
 Base.show(io::IO, ::MIME"text/plain", e::ElemRestriction) =
     ceed_show(io, e, C.CeedElemRestrictionView)
 
 @doc raw"""
-    create_elem_restriction(ceed::Ceed, nelem, elemsize, ncomp, compstride, lsize, mtype::MemType, cmode::CopyMode, offsets::AbstractArray{CeedInt})
+    create_elem_restriction(
+        ceed::Ceed,
+        nelem,
+        elemsize,
+        ncomp,
+        compstride,
+        lsize,
+        offsets::AbstractArray{CeedInt},
+        mtype::MemType=MEM_HOST,
+        cmode::CopyMode=COPY_VALUES,
+    )
 
 Create a `CeedElemRestriction`.
 
@@ -50,13 +61,13 @@ Create a `CeedElemRestriction`.
                 L-vector at index `offsets[i + k*elemsize] + j*compstride`.
 - `lsize`:      The size of the L-vector. This vector may be larger than the
                 elements and fields given by this restriction.
-- `mtype`:      Memory type of the `offsets` array, see [`MemType`](@ref)
-- `cmode`:      Copy mode for the `offsets` array, see [`CopyMode`](@ref)
 - `offsets`:    Array of shape `(elemsize, nelem)`. Column $i$ holds the ordered
                 list of the offsets (into the input [`CeedVector`](@ref)) for
                 the unknowns corresponding to element $i$, where $0 \leq i <
                 \textit{nelem}$. All offsets must be in the range $[0,
                 \textit{lsize} - 1]$.
+- `mtype`:      Memory type of the `offsets` array, see [`MemType`](@ref)
+- `cmode`:      Copy mode for the `offsets` array, see [`CopyMode`](@ref)
 """
 function create_elem_restriction(
     c::Ceed,
@@ -65,9 +76,9 @@ function create_elem_restriction(
     ncomp,
     compstride,
     lsize,
-    mtype::MemType,
-    cmode::CopyMode,
-    offsets::AbstractArray{CeedInt},
+    offsets::AbstractArray{CeedInt};
+    mtype::MemType=MEM_HOST,
+    cmode::CopyMode=COPY_VALUES,
 )
     ref = Ref{C.CeedElemRestriction}()
     C.CeedElemRestrictionCreate(

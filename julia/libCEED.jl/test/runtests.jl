@@ -176,13 +176,13 @@ using Test, libCEED, LinearAlgebra, StaticArrays
         b = create_tensor_h1_lagrange_basis(c, 3, 1, 3, 3, GAUSS_LOBATTO)
         n = getnumnodes(b)
         offsets = Vector{CeedInt}(0:n-1)
-        er = create_elem_restriction(c, 1, n, 1, 1, n, MEM_HOST, COPY_VALUES, offsets)
+        r = create_elem_restriction(c, 1, n, 1, 1, n, offsets)
         op = Operator(
             c;
             qf=id,
             fields=[
-                (:input, er, b, CeedVectorActive()),
-                (:output, er, b, CeedVectorActive()),
+                (:input, r, b, CeedVectorActive()),
+                (:output, r, b, CeedVectorActive()),
             ],
         )
         io = IOBuffer()
@@ -204,5 +204,26 @@ using Test, libCEED, LinearAlgebra, StaticArrays
         v2 = CeedVector(c, n)
         apply!(op, v1, v2)
         @test @witharray_read(a1 = v1, @witharray_read(a2 = v2, a1 == a2))
+    end
+
+    @testset "ElemRestriction" begin
+        c = Ceed()
+        n = 10
+        offsets = Vector{CeedInt}(0:n-1)
+        r = create_elem_restriction(c, 1, n, 1, 1, n, offsets)
+        io = IOBuffer()
+        show(io, MIME("text/plain"), r)
+        @test String(take!(io)) == string(
+            "CeedElemRestriction from (10, 1) to 1 elements ",
+            "with 10 nodes each and component stride 1",
+        )
+
+        strides = CeedInt[1, n, n]
+        rs = create_elem_restriction_strided(c, 1, n, 1, n, strides)
+        show(io, MIME("text/plain"), rs)
+        @test String(take!(io)) == string(
+            "CeedElemRestriction from (10, 1) to 1 elements ",
+            "with 10 nodes each and strides [1, $n, $n]",
+        )
     end
 end
