@@ -5,7 +5,11 @@ function iostr(f, x)
     f(io, x)
     String(take!(io))
 end
-showstr(x) = iostr(x) do io,x show(io, MIME("text/plain"), x) end
+function showstr(x)
+    iostr(x) do io, y
+        show(io, MIME("text/plain"), y)
+    end
+end
 summarystr(x) = iostr(summary, x)
 getoutput(fname) = chomp(read(joinpath(@__DIR__, "output", fname), String))
 
