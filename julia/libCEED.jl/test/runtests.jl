@@ -13,6 +13,11 @@ end
 summarystr(x) = iostr(summary, x)
 getoutput(fname) = chomp(read(joinpath(@__DIR__, "output", fname), String))
 
+mutable struct CtxData
+    io::IOBuffer
+    x::Vector{Float64}
+end
+
 @testset "libCEED" begin
     @testset "Ceed" begin
         res = "/cpu/self/ref/serial"
@@ -75,8 +80,7 @@ getoutput(fname) = chomp(read(joinpath(@__DIR__, "output", fname), String))
         println(io, ":")
         @witharray_read(a = v, Base.print_array(io, a))
         s1 = String(take!(io))
-        show(io, MIME("text/plain"), v)
-        @test showstr(v) == String(take!(io))
+        @test showstr(v) == s1
     end
 
     @testset "Basis" begin
@@ -162,18 +166,34 @@ getoutput(fname) = chomp(read(joinpath(@__DIR__, "output", fname), String))
         apply!(id2, Q, [v1], [v2])
         @test @witharray(a = v2, a == v)
 
+        ctxdata = CtxData(IOBuffer(), rand(3))
+        ctx = Context(c, ctxdata)
         dim = 3
         @interior_qf qf = (
             c,
             dim=dim,
+            ctxdata::CtxData,
             (a, :in, EVAL_GRAD, dim),
-            (b, :in, EVAL_INTERP),
-            (c, :out, EVAL_NONE),
-            nothing,
+            (b, :in, EVAL_NONE),
+            (c, :out, EVAL_INTERP),
+            begin
+                c[] = b*sum(a)
+                show(ctxdata.io, MIME("text/plain"), ctxdata.x)
+            end,
         )
+        set_context!(qf, ctx)
         in_sz, out_sz = libCEED.get_field_sizes(qf)
         @test in_sz == [dim, 1]
         @test out_sz == [1]
+        v1 = rand(dim)
+        v2 = rand(1)
+        cv1 = CeedVector(c, v1)
+        cv2 = CeedVector(c, v2)
+        cv3 = CeedVector(c, 1)
+        apply!(qf, 1, [cv1, cv2], [cv3])
+        @test String(take!(ctxdata.io)) == showstr(ctxdata.x)
+        @test @witharray_read(v3 = cv3, v3[1] == v2[1]*sum(v1))
+
         @test QFunctionNone()[] == libCEED.C.CEED_QFUNCTION_NONE[]
     end
 
