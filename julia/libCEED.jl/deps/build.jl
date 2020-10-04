@@ -1,19 +1,18 @@
-const pathkey = "JULIA_LIBCEED_LIB"
+const libceed_envvar = "JULIA_LIBCEED_LIB"
 
-if isfile("config.txt")
-   rm("config.txt")
+if isfile("deps.jl")
+   rm("deps.jl")
 end
 
-if haskey(ENV, pathkey)
-   ceedpath = ENV[pathkey]
-   open("config.txt", write=true) do f
-      println(f, ceedpath)
+if haskey(ENV, libceed_envvar)
+   ceedpath = ENV[libceed_envvar]
+   @info "Using libCEED library specified by $libceed_envvar at $ceedpath"
+   open("deps.jl", write=true) do f
+      println(f, "const libceed = \"$(escape_string(ceedpath))\"")
    end
 else
-   error("""
-   JULIA_LIBCEED_LIB environment variable not set.
-
-   To build libCEED.jl, set the JULIA_LIBCEED_LIB environment variable
-   to the absolute path of the libCEED dynamic library.
-   """)
+   @info "Using prebuilt libCEED binaries provided by libCEED_jll"
+   open("deps.jl", write=true) do f
+      println(f, "using libCEED_jll")
+   end
 end
