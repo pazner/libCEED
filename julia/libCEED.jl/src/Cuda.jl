@@ -1,4 +1,8 @@
 # COV_EXCL_START
+using .CUDA
+
+cuda_is_loaded = true
+
 struct FieldsCuda
     inputs::NTuple{16,Int}
     outputs::NTuple{16,Int}
@@ -13,13 +17,20 @@ function generate_kernel(qf_name, kf, dims_in, dims_out)
 
     f_ins = [Symbol("rqi$i") for i = 1:ninputs]
     f_outs = [Symbol("rqo$i") for i = 1:noutputs]
-
     args = [f_ins; f_outs]
 
-    def_ins = [
-        :($(f_ins[i]) = libCEED.MArray{Tuple{$(dims_in[i]...)},Float64}(undef))
-        for i = 1:ninputs
-    ]
+    def_ins = Vector{Expr}(undef, ninputs)
+    f_ins_j = Vector{Union{Symbol,Expr}}(undef, ninputs)
+    for i = 1:ninputs
+        if length(dims_in[i]) == 0
+            def_ins[i] = :(local $(f_ins[i]))
+            f_ins_j[i] = f_ins[i]
+        else
+            def_ins[i] =
+                :($(f_ins[i]) = libCEED.MArray{Tuple{$(dims_in[i]...)},Float64}(undef))
+            f_ins_j[i] = :($(f_ins[i])[j])
+        end
+    end
     def_outs = [
         :($(f_outs[i]) = libCEED.MArray{Tuple{$(dims_out[i]...)},Float64}(undef))
         for i = 1:noutputs
@@ -28,7 +39,7 @@ function generate_kernel(qf_name, kf, dims_in, dims_out)
     read_quads_in = [
         :(
             for j = 1:$(input_sz[i])
-                $(f_ins[i])[j] = unsafe_load(
+                $(f_ins_j[i]) = unsafe_load(
                     libCEED.CUDA.DevicePtr(libCEED.CuPtr{CeedScalar}(fields.inputs[$i])),
                     q + (j - 1)*Q,
                     a,
@@ -88,6 +99,7 @@ function mk_cufunction(ceed, def_module, qf_name, kf, dims_in, dims_out)
 
     k_fn = Core.eval(def_module, generate_kernel(qf_name, kf, dims_in, dims_out))
     tt = Tuple{Ptr{Nothing},Int32,FieldsCuda}
-    cufunction(k_fn, tt; maxregs=64)
+    host_k = cufunction(k_fn, tt; maxregs=64)
+    return host_k.fun.handle
 end
 # COV_EXCL_STOP

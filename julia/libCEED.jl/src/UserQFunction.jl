@@ -2,7 +2,7 @@ struct UserQFunction{F,K}
     f::F
     fptr::Ptr{Nothing}
     kf::K
-    cuf::Union{Nothing,CUDA.HostKernel}
+    cuf::Union{Nothing,Ptr{Nothing}}
 end
 
 @inline function extract_context(ptr, ::Type{T}) where {T}
@@ -103,7 +103,11 @@ function generate_user_qfunction(
             end
         end,
     )
-    cuf = mk_cufunction(ceed, def_module, qf_name, kf, dims_in, dims_out)
+    if cuda_is_loaded
+        cuf = mk_cufunction(ceed, def_module, qf_name, kf, dims_in, dims_out)
+    else
+        cuf = nothing
+    end
 
     UserQFunction(f, fptr, kf, cuf)
 end

@@ -1,6 +1,6 @@
 module libCEED
 
-using CUDA, StaticArrays, UnsafeArrays
+using StaticArrays, UnsafeArrays, Requires
 
 # import low-level C interface
 include("C.jl")
@@ -120,9 +120,11 @@ include("QFunction.jl")
 include("Request.jl")
 include("Operator.jl")
 include("Misc.jl")
-include("Cuda.jl")
+
+cuda_is_loaded = false
 
 function __init__()
+    @require CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba" include("CUDA.jl")
     set_globals()
 end
 
