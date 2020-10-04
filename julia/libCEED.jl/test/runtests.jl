@@ -71,9 +71,6 @@ end
         witharray(x -> x .= 1.0, v)
         @test @witharray(a = v, all(a .== 1.0))
 
-        @test CeedVectorActive()[] == libCEED.C.CEED_VECTOR_ACTIVE[]
-        @test CeedVectorNone()[] == libCEED.C.CEED_VECTOR_NONE[]
-
         @test summarystr(v) == "$n-element CeedVector"
         io = IOBuffer()
         summary(io, v)
@@ -81,6 +78,19 @@ end
         @witharray_read(a = v, Base.print_array(io, a))
         s1 = String(take!(io))
         @test showstr(v) == s1
+
+        setarray!(v, MEM_HOST, USE_POINTER, v1)
+        sync_array!(v, MEM_HOST)
+        @test @witharray_read(a = v, a == v1)
+        p = take_array!(v, MEM_HOST)
+        @test p == pointer(v1)
+
+        m = rand(10, 10)
+        vm = CeedVector(c, vec(m))
+        @test @witharray_read(a = vm, size = size(m), a == m)
+
+        @test CeedVectorActive()[] == libCEED.C.CEED_VECTOR_ACTIVE[]
+        @test CeedVectorNone()[] == libCEED.C.CEED_VECTOR_NONE[]
     end
 
     @testset "Basis" begin
