@@ -104,7 +104,7 @@ function generate_user_qfunction(
         end,
     )
     if cuda_is_loaded
-        cuf = mk_cufunction(ceed, def_module, qf_name, kf, dims_in, dims_out)
+        cuf = mk_cufunction(ceed, def_module, qf_name, kf, dims_in, dims_out) # COV_EXCL_LINE
     else
         cuf = nothing
     end
