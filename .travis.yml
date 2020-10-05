@@ -117,14 +117,14 @@ jobs:
      install:
        - make info && make -j4
        - export JULIA_LIBCEED_LIB=$(find $PWD/lib -name "libceed.*")
-       - pushd julia/libCEED.jl
+       - pushd julia/LibCEED.jl
      script:
-       - julia --project -e 'import Pkg; Pkg.build(); Pkg.test("libCEED"; coverage=true)'
-       - unset JULIA_LIBCEED_LIB && julia --project -e 'import Pkg; Pkg.build(); Pkg.test("libCEED"; coverage=true)'
+       - julia --project -e 'import Pkg; Pkg.build(); Pkg.test("LibCEED"; coverage=true)'
+       - unset JULIA_LIBCEED_LIB && julia --project -e 'import Pkg; Pkg.build(); Pkg.test("LibCEED")'
        - julia .CeedStyle.jl && git diff --exit-code src test examples
      after_success:
        - popd
-       - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder("julia/libCEED.jl/src"))'
+       - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder("julia/LibCEED.jl/src"))'
 
 install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then

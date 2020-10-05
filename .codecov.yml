@@ -5,7 +5,7 @@ fixes:
   - "build/backends/::backends/"
 
 ignore:
-  - "julia/libCEED.jl/src/generated/*.jl"
+  - "julia/LibCEED.jl/src/generated/*.jl"
 
 # CodeCov shows up in the checks on GitHub pull requests
 comment: false
