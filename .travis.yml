@@ -120,6 +120,7 @@ jobs:
        - pushd julia/libCEED.jl
      script:
        - julia --project -e 'import Pkg; Pkg.build(); Pkg.test("libCEED"; coverage=true)'
+       - unset JULIA_LIBCEED_LIB && julia --project -e 'import Pkg; Pkg.build(); Pkg.test("libCEED"; coverage=true)'
        - julia .CeedStyle.jl && git diff --exit-code src test examples
      after_success:
        - popd
