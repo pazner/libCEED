@@ -1,4 +1,4 @@
-using libCEED, Printf, StaticArrays
+using LibCEED, Printf, StaticArrays
 
 include("common.jl")
 

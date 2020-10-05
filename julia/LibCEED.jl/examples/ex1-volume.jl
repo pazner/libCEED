@@ -1,4 +1,4 @@
-using libCEED, Printf
+using LibCEED, Printf
 
 include("common.jl")
 

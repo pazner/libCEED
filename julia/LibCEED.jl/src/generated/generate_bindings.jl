@@ -6,7 +6,7 @@ using Clang.LibClang.Clang_jll
 
 Generate Julia bindings for the libCEED library, where `ceed_path` is the path
 of the libCEED directory. The generated bindings are used (with some manual
-modifications) to create the low-level C interface libCEED.C for the libCEED.jl
+modifications) to create the low-level C interface LibCEED.C for the LibCEED.jl
 package.
 """
 function generate_ceed_wrapper(ceed_path)

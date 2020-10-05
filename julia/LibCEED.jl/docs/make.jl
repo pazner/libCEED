@@ -1,6 +1,6 @@
-using Documenter, libCEED, LinearAlgebra
+using Documenter, LibCEED, LinearAlgebra
 
-makedocs(sitename="libCEED.jl Docs",
+makedocs(sitename="LibCEED.jl Docs",
          format=Documenter.HTML(prettyurls=false),
          pages=[
              "Home" => "index.md",

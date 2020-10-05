@@ -5,10 +5,10 @@ module C
 using CEnum, Libdl
 
 # Get the path to the libCEED dynamic library, configured during the build step
-# of the libCEED.jl package.
+# of the LibCEED.jl package.
 const depsfile = joinpath(@__DIR__, "..", "deps", "deps.jl")
 if !isfile(depsfile)
-    error("libCEED.jl not properly installed. Please run Pkg.build(\"libCEED\")")
+    error("LibCEED.jl not properly installed. Please run Pkg.build(\"LibCEED\")")
 end
 include(depsfile)
 

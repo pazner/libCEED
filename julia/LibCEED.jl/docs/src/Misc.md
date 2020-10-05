@@ -8,7 +8,7 @@ the given size.
 If the matrix or vector is given in a statically sized container (e.g. using
 [StaticArrays.jl](https://github.com/JuliaArrays/StaticArrays.jl/)) then this
 happens automatically. However, if the matrix is not statically sized, and
-instead is given as, for example, a view into a larger array, then libCEED.jl
+instead is given as, for example, a view into a larger array, then LibCEED.jl
 provides some convenient specialized functions.
 
 In order to allow for generic code, the [`CeedDim`](@ref) struct is used for
@@ -19,7 +19,7 @@ result in a type instability, and give poor performance.
 
 For example:
 ```@repl
-using libCEED, LinearAlgebra
+using LibCEED, LinearAlgebra
 
 dim = 3;
 J = rand(dim, dim);

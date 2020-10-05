@@ -1,4 +1,4 @@
-module libCEED
+module LibCEED
 
 using StaticArrays, UnsafeArrays, Requires
 

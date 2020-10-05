@@ -1,7 +1,7 @@
-# libCEED.jl Docs
+# LibCEED.jl Docs
 
-Documentation for the [libCEED.jl](https://github.com/pazner/libCEED.jl) Julia
-interfce to the [libCEED](https://github.com/ceed/libceed) library.
+Documentation for the LibCEED.jl Julia interface to the
+[libCEED](https://github.com/ceed/libceed) library.
 
 For further information, see also the [libCEED
 documentation](https://libceed.readthedocs.io/).
@@ -9,7 +9,7 @@ documentation](https://libceed.readthedocs.io/).
 Several [short examples](Examples.md) are included to demonstrate the
 functionality.
 
-A key feature of libCEED.jl is the ability to [define user
+A key feature of LibCEED.jl is the ability to [define user
 Q-functions](UserQFunctions.md) natively in Julia.
 
 ## Advantages of a high-level interface for libCEED
@@ -17,7 +17,7 @@ Q-functions](UserQFunctions.md) natively in Julia.
 
 #### User Q-functions
 
-With libCEED.jl, it is much easier to write dimension-independent user-defined
+With LibCEED.jl, it is much easier to write dimension-independent user-defined
 Q-functions that automatically work on the GPU. See the [related
 documentation](UserQFunctions.md) for more information.
 
@@ -31,7 +31,7 @@ possibly be bug-prone, because the user may forget to restore the array, or may
 match the `Read` version to get the array with non-`Read` version to restore the
 array (or vice versa).
 
-In libCEED.jl, this difficulty is mitigated using the [`witharray`](@ref)
+In LibCEED.jl, this difficulty is mitigated using the [`witharray`](@ref)
 function and [`@witharray`](@ref) macro. There are also read-only versions,
 [`witharray_read`](@ref) and [`@witharray_read`](@ref). When using this
 functionality, it is impossible to forget to restore the array, and the correct

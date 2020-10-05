@@ -90,7 +90,7 @@ function apply!(
     catch e
         # COV_EXCL_START
         # Cannot recover from exceptions in operator apply
-        printstyled(stderr, "libCEED.jl: "; color=:light_red, bold=true)
+        printstyled(stderr, "LibCEED.jl: "; color=:light_red, bold=true)
         printstyled(stderr, "error occurred when applying operator.\n", color=:light_red)
         printstyled(
             stderr,

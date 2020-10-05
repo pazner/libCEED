@@ -1,6 +1,6 @@
 # Examples
 
-libCEED.jl includes three short examples, which are analogues of the two
+LibCEED.jl includes three short examples, which are analogues of the two
 examples in `libCEED/examples/ceed`.
 
 These examples are:

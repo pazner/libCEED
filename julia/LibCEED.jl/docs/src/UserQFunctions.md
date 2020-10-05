@@ -1,6 +1,6 @@
 # Defining User Q-Functions
 
-An important feature of libCEED.jl is the ability to define [user
+An important feature of LibCEED.jl is the ability to define [user
 Q-functions](https://libceed.readthedocs.io/en/latest/libCEEDapi/#gallery-of-qfunctions)
 natively in Julia. These user Q-functions work with both the CPU and CUDA
 backends.
@@ -129,7 +129,7 @@ which make the specified values available within the body of the Q-function as
 compile-time constants.
 
 In this example, `dim` is either 1, 2, or 3 according to the spatial dimension
-of the problem. When the user Q-function is defined, libCEED.jl will JIT compile
+of the problem. When the user Q-function is defined, LibCEED.jl will JIT compile
 the body of the Q-function and make it available to libCEED as a C callback. In
 the body of this Q-function, `dim` will be available, and its value will be a
 compile-time constant, allowing for (static) dispatch based on the value of
@@ -156,8 +156,8 @@ The geometric factors stored in `qdata` represent the symmetric matrix $w
 reduce data usage, instead of storing this data as a $d \times d$ matrix, we use
 the fact that we know it is symmetric to only store $d(d+1)/2$ entries, and the
 remaining entries we infer by symmetry. These entries are stored using the
-[Voigt convention](https://en.wikipedia.org/wiki/Voigt_notation). libCEED.jl
-provides some [utilities](Misc.md#libCEED.getvoigt) for storing and extracting
+[Voigt convention](https://en.wikipedia.org/wiki/Voigt_notation). LibCEED.jl
+provides some [utilities](Misc.md#LibCEED.getvoigt) for storing and extracting
 symmetric matrices stored in this fashion.
 
 After the field specifications, we have the body of the Q-function:

@@ -1,5 +1,5 @@
-using libCEED.C, Printf, UnsafeArrays
-using libCEED.C: CeedInt, CeedScalar
+using LibCEED.C, Printf, UnsafeArrays
+using LibCEED.C: CeedInt, CeedScalar
 
 # A structure used to pass additional data to f_build_mass
 mutable struct BuildContextC

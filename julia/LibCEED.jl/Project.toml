@@ -1,4 +1,4 @@
-name = "libCEED"
+name = "LibCEED"
 uuid = "2cd74e05-b976-4426-91fa-5f1011f8952b"
 authors = ["Will Pazner <will.e.p@gmail.com>"]
 version = "0.1.0"

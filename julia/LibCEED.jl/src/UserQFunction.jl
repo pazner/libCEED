@@ -52,7 +52,7 @@ function generate_user_qfunction(
                 array_views[i] = :($arr_name = $slice)
             else
                 S = Tuple{dims...}
-                array_views[i] = :($arr_name = libCEED.SArray{$S}(@view $slice))
+                array_views[i] = :($arr_name = LibCEED.SArray{$S}(@view $slice))
             end
         else
             array_views[i] = :($arr_name = @view $slice)

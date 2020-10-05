@@ -1,4 +1,4 @@
-using Test, libCEED, LinearAlgebra, StaticArrays
+using Test, LibCEED, LinearAlgebra, StaticArrays
 
 function iostr(f, x)
     io = IOBuffer()
@@ -18,7 +18,7 @@ mutable struct CtxData
     x::Vector{Float64}
 end
 
-@testset "libCEED" begin
+@testset "LibCEED" begin
     @testset "Ceed" begin
         res = "/cpu/self/ref/serial"
         c = Ceed(res)
@@ -26,7 +26,7 @@ end
         @test getresource(c) == res
         @test !iscuda(c)
         @test get_preferred_memtype(c) == MEM_HOST
-        @test_throws libCEED.CeedError create_interior_qfunction(c, "")
+        @test_throws LibCEED.CeedError create_interior_qfunction(c, "")
         @test showstr(c) == """
             Ceed
               Ceed Resource: $res
@@ -89,8 +89,8 @@ end
         vm = CeedVector(c, vec(m))
         @test @witharray_read(a = vm, size = size(m), a == m)
 
-        @test CeedVectorActive()[] == libCEED.C.CEED_VECTOR_ACTIVE[]
-        @test CeedVectorNone()[] == libCEED.C.CEED_VECTOR_NONE[]
+        @test CeedVectorActive()[] == LibCEED.C.CEED_VECTOR_ACTIVE[]
+        @test CeedVectorNone()[] == LibCEED.C.CEED_VECTOR_NONE[]
     end
 
     @testset "Basis" begin
@@ -136,12 +136,12 @@ end
         @test vq ≈ b1d*v
         @test vd ≈ d1d*v
 
-        @test BasisCollocated()[] == libCEED.C.CEED_BASIS_COLLOCATED[]
+        @test BasisCollocated()[] == LibCEED.C.CEED_BASIS_COLLOCATED[]
     end
 
     @testset "Request" begin
-        @test RequestImmediate()[] == libCEED.C.CEED_REQUEST_IMMEDIATE[]
-        @test RequestOrdered()[] == libCEED.C.CEED_REQUEST_ORDERED[]
+        @test RequestImmediate()[] == LibCEED.C.CEED_REQUEST_IMMEDIATE[]
+        @test RequestOrdered()[] == LibCEED.C.CEED_REQUEST_ORDERED[]
     end
 
     @testset "Misc" begin
@@ -210,7 +210,7 @@ end
             end,
         )
         set_context!(qf, ctx)
-        in_sz, out_sz = libCEED.get_field_sizes(qf)
+        in_sz, out_sz = LibCEED.get_field_sizes(qf)
         @test in_sz == [dim, 1]
         @test out_sz == [1]
         v1 = rand(dim)
@@ -222,7 +222,7 @@ end
         @test String(take!(ctxdata.io)) == showstr(ctxdata.x)
         @test @witharray_read(v3 = cv3, v3[1] == v2[1]*sum(v1))
 
-        @test QFunctionNone()[] == libCEED.C.CEED_QFUNCTION_NONE[]
+        @test QFunctionNone()[] == LibCEED.C.CEED_QFUNCTION_NONE[]
     end
 
     @testset "Operator" begin
@@ -276,6 +276,6 @@ end
             "with 10 nodes each and strides [1, $n, $n]",
         )
 
-        @test ElemRestrictionNone()[] == libCEED.C.CEED_ELEMRESTRICTION_NONE[]
+        @test ElemRestrictionNone()[] == LibCEED.C.CEED_ELEMRESTRICTION_NONE[]
     end
 end
