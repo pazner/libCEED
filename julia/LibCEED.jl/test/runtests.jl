@@ -123,11 +123,21 @@ end
         q1d = [-1.0, 0.0, 1.0]
         w1d = [1/3, 4/3, 1/3]
         q, p = size(b1d)
+        d2d = zeros(2, q*q, p*p)
+        d2d[1, :, :] = kron(b1d, d1d)
+        d2d[2, :, :] = kron(d1d, b1d)
 
-        b2 = create_tensor_h1_basis(c, dim, 1, p, q, b1d, d1d, q1d, w1d)
+        dim2 = 2
+        b2 = create_tensor_h1_basis(c, dim2, 1, p, q, b1d, d1d, q1d, w1d)
+        @test getinterp(b2) == kron(b1d, b1d)
+        @test getinterp1d(b2) == b1d
+        @test getgrad(b2) == d2d
+        @test getgrad1d(b2) == d1d
         @test showstr(b2) == getoutput("b2.out")
 
         b3 = create_h1_basis(c, LINE, 1, p, q, b1d, reshape(d1d, 1, q, p), q1d, w1d)
+        @test getqref(b3) == q1d
+        @test getqweights(b3) == w1d
         @test showstr(b3) == getoutput("b3.out")
 
         v = rand(2)
@@ -257,16 +267,35 @@ end
         v2 = CeedVector(c, n)
         apply!(op, v1, v2)
         @test @witharray_read(a1 = v1, @witharray_read(a2 = v2, a1 == a2))
+        apply_add!(op, v1, v2)
+        @test @witharray_read(a1 = v1, @witharray_read(a2 = v2, a1 + a1 == a2))
+
+        comp_op = create_composite_operator(c, [op])
+        apply!(op, v1, v2)
+        @test @witharray_read(a1 = v1, @witharray_read(a2 = v2, a1 == a2))
     end
 
     @testset "ElemRestriction" begin
         c = Ceed()
         n = 10
-        offsets = Vector{CeedInt}(0:n-1)
-        r = create_elem_restriction(c, 1, n, 1, 1, n, offsets)
+        offsets = Vector{CeedInt}([0:n-1; n-1:2*n-2])
+        lsize = 2*n - 1
+        r = create_elem_restriction(c, 2, n, 1, lsize, lsize, offsets)
+        @test getcompstride(r) == lsize
+        @test getnumelements(r) == 2
+        @test getelementsize(r) == n
+        @test getlvectorsize(r) == lsize
+        @test getnumcomponents(r) == 1
+        lv, ev = create_vectors(r)
+        @test length(lv) == lsize
+        @test length(ev) == 2*n
+        getmultiplicity(r, lv)
+        mult = ones(lsize)
+        mult[n] = 2
+        @test @witharray_read(a = lv, mult == a)
         @test showstr(r) == string(
-            "CeedElemRestriction from (10, 1) to 1 elements ",
-            "with 10 nodes each and component stride 1",
+            "CeedElemRestriction from (19, 1) to 2 elements ",
+            "with 10 nodes each and component stride 19",
         )
 
         strides = CeedInt[1, n, n]
