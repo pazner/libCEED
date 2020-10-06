@@ -12,7 +12,7 @@ functionality.
 A key feature of LibCEED.jl is the ability to [define user
 Q-functions](UserQFunctions.md) natively in Julia.
 
-## Advantages of a high-level interface for libCEED
+### Advantages of a high-level interface for libCEED
 
 
 #### User Q-functions
@@ -100,6 +100,7 @@ Pages = [
 ]
 ```
 
+### C interface
 ```@contents
 Pages = ["C.md"]
 ```

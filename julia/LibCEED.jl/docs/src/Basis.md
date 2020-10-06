@@ -1,5 +1,13 @@
 # Basis
 
+!!! info "Column-major vs. row-major storage"
+    libCEED internally uses row-major (C convention) storage of matrices,
+    while Julia uses column-major (Fortran convention) storage.
+
+    LibCEED.jl will typically handle the conversion between these formats by
+    transposing or permuting the dimensions of the input and output matrices
+    and tensors.
+
 ```@docs
 Basis
 BasisCollocated
@@ -10,9 +18,15 @@ apply!(b::Basis, nelem, tmode::TransposeMode, emode::EvalMode, u::LibCEED.Abstra
 apply(c::Ceed, b::Basis, u::AbstractVector; nelem=1, tmode=NOTRANSPOSE, emode=EVAL_INTERP)
 getdimension
 gettopology
-getnumcomponents
+getnumcomponents(b::Basis)
 getnumnodes
 getnumnodes1d
 getnumqpts
 getnumqpts1d
+getqref
+getqweights
+getinterp
+getinterp1d
+getgrad
+getgrad1d
 ```
