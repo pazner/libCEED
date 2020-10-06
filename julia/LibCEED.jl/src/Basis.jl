@@ -312,3 +312,85 @@ function getnumqpts1d(b::Basis)
     C.CeedBasisGetNumQuadraturePoints1D(b[], nqpts1d)
     nqpts1d[]
 end
+
+"""
+    getqref(b::Basis)
+
+Get the reference coordinates of quadrature points (in `dim` dimensions) of the
+given [`Basis`](@ref).
+"""
+function getqref(b::Basis)
+    ref = Ref{Ptr{CeedScalar}}()
+    C.CeedBasisGetQRef(b[], ref)
+    copy(unsafe_wrap(Array, ref[], getnumqpts(b)))
+end
+
+"""
+    getqref(b::Basis)
+
+Get the quadrature weights of quadrature points (in `dim` dimensions) of the
+given [`Basis`](@ref).
+"""
+function getqweights(b::Basis)
+    ref = Ref{Ptr{CeedScalar}}()
+    C.CeedBasisGetQWeights(b[], ref)
+    copy(unsafe_wrap(Array, ref[], getnumqpts(b)))
+end
+
+"""
+    getinterp(b::Basis)
+
+Get the interpolation matrix of the given [`Basis`](@ref). Returns a matrix of size
+`(getnumqpts(b), getnumnodes(b))`.
+"""
+function getinterp(b::Basis)
+    ref = Ref{Ptr{CeedScalar}}()
+    C.CeedBasisGetInterp(b[], ref)
+    q = getnumqpts(b)
+    p = getnumnodes(b)
+    collect(unsafe_wrap(Array, ref[], (p, q))')
+end
+
+"""
+    getinterp1d(b::Basis)
+
+Get the 1D interpolation matrix of the given [`Basis`](@ref). `b` must be a tensor-product
+basis, otherwise this function will fail. Returns a matrix of size
+`(getnumqpts1d(b), getnumnodes1d(b))`.
+"""
+function getinterp1d(b::Basis)
+    ref = Ref{Ptr{CeedScalar}}()
+    C.CeedBasisGetInterp1D(b[], ref)
+    q = getnumqpts1d(b)
+    p = getnumnodes1d(b)
+    collect(unsafe_wrap(Array, ref[], (p, q))')
+end
+
+"""
+    getgad(b::Basis)
+
+Get the gradient matrix of the given [`Basis`](@ref). Returns a tensor of size
+`(getdimension(b), getnumqpts(b), getnumnodes(b))`.
+"""
+function getgrad(b::Basis)
+    ref = Ref{Ptr{CeedScalar}}()
+    C.CeedBasisGetGrad(b[], ref)
+    dim = getdimension(b)
+    q = getnumqpts(b)
+    p = getnumnodes(b)
+    permutedims(unsafe_wrap(Array, ref[], (p, q, dim)), [3, 2, 1])
+end
+
+"""
+    getgad1d(b::Basis)
+
+Get the 1D derivative matrix of the given [`Basis`](@ref). Returns a matrix
+`(getnumqpts(b), getnumnodes(b))`.
+"""
+function getgrad1d(b::Basis)
+    ref = Ref{Ptr{CeedScalar}}()
+    C.CeedBasisGetGrad1D(b[], ref)
+    q = getnumqpts1d(b)
+    p = getnumnodes1d(b)
+    collect(unsafe_wrap(Array, ref[], (p, q))')
+end

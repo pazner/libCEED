@@ -60,6 +60,22 @@ function Operator(
     Operator(ref, qf, dqf, dqfT)
 end
 
+"""
+    create_composite_operator(c::Ceed, ops)
+
+Create an [`Operator`](@ref) whose action represents the sum of the operators in the
+collection `ops`.
+"""
+function create_composite_operator(c::Ceed, ops)
+    ref = Ref{C.CeedOperator}()
+    C.CeedCompositeOperatorCreate(c[], ref)
+    comp_op = Operator(ref, QFunctionNone(), QFunctionNone(), QFunctionNone())
+    for op ∈ ops
+        C.CeedCompositeOperatorAddSub(comp_op[], op[])
+    end
+    comp_op
+end
+
 function set_field!(
     op::Operator,
     fieldname::AbstractString,
@@ -85,21 +101,23 @@ function apply!(
     vout::AbstractCeedVector,
     request::AbstractRequest=RequestImmediate(),
 )
-    try
-        C.CeedOperatorApply(op[], vin[], vout[], request[])
-    catch e
-        # COV_EXCL_START
-        # Cannot recover from exceptions in operator apply
-        printstyled(stderr, "LibCEED.jl: "; color=:light_red, bold=true)
-        printstyled(stderr, "error occurred when applying operator.\n", color=:light_red)
-        printstyled(
-            stderr,
-            "Cannot recover from error during operator application. Exiting.\n\n",
-            color=:light_red,
-        )
-        Base.display_error(stderr, Base.catch_stack())
-        # Exit without running atexit hooks or finalizers
-        ccall(:exit, Cvoid, (Cint,), 1)
-        # COV_EXCL_STOP
-    end
+    C.CeedOperatorApply(op[], vin[], vout[], request[])
+end
+
+"""
+    apply_add!(op::Operator, vin, vout, request=RequestImmediate())
+
+Apply the action of the operator `op` to the input vector `vin`, and add the
+result to the output vector `vout`.
+
+For non-blocking application, the user can specify a request object. By default,
+immediate (synchronous) completion is requested.
+"""
+function apply_add!(
+    op::Operator,
+    vin::AbstractCeedVector,
+    vout::AbstractCeedVector,
+    request::AbstractRequest=RequestImmediate(),
+)
+    C.CeedOperatorApplyAdd(op[], vin[], vout[], request[])
 end

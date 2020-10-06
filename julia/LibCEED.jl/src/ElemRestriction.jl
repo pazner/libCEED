@@ -124,3 +124,104 @@ function create_elem_restriction_strided(c::Ceed, nelem, elemsize, ncomp, lsize,
     C.CeedElemRestrictionCreateStrided(c[], nelem, elemsize, ncomp, lsize, strides, ref)
     ElemRestriction(ref)
 end
+
+"""
+    create_evector(r::ElemRestriction)
+
+Return a new [`CeedVector`](@ref) E-vector.
+"""
+function create_evector(r::ElemRestriction)
+    ref = Ref{C.CeedVector}()
+    C.CeedElemRestrictionCreateVector(r[], C_NULL, ref)
+    CeedVector(ref)
+end
+
+"""
+    create_lvector(r::ElemRestriction)
+
+Return a new [`CeedVector`](@ref) L-vector.
+"""
+function create_lvector(r::ElemRestriction)
+    ref = Ref{C.CeedVector}()
+    C.CeedElemRestrictionCreateVector(r[], ref, C_NULL)
+    CeedVector(ref)
+end
+
+"""
+    create_vectors(r::ElemRestriction)
+
+Return an (L-vector, E-vector) pair.
+"""
+function create_vectors(r::ElemRestriction)
+    l_ref = Ref{C.CeedVector}()
+    e_ref = Ref{C.CeedVector}()
+    C.CeedElemRestrictionCreateVector(r[], l_ref, e_ref)
+    CeedVector(l_ref), CeedVector(e_ref)
+end
+
+"""
+    getcompstride(r::ElemRestriction)
+
+Get the L-vector component stride.
+"""
+function getcompstride(r::ElemRestriction)
+    lsize = Ref{CeedInt}()
+    C.CeedElemRestrictionGetCompStride(r[], lsize)
+    lsize[]
+end
+
+"""
+    getnumelements(r::ElemRestriction)
+
+Get the total number of elements in the range of an [`ElemRestriction`](@ref).
+"""
+function getnumelements(r::ElemRestriction)
+    result = Ref{CeedInt}()
+    C.CeedElemRestrictionGetNumElements(r[], result)
+    result[]
+end
+
+"""
+    getelementsize(r::ElemRestriction)
+
+Get the size of elements in the given [`ElemRestriction`](@ref).
+"""
+function getelementsize(r::ElemRestriction)
+    result = Ref{CeedInt}()
+    C.CeedElemRestrictionGetElementSize(r[], result)
+    result[]
+end
+
+"""
+    getlvectorsize(r::ElemRestriction)
+
+Get the size of an L-vector for the given [`ElemRestriction`](@ref).
+"""
+function getlvectorsize(r::ElemRestriction)
+    result = Ref{CeedInt}()
+    C.CeedElemRestrictionGetLVectorSize(r[], result)
+    result[]
+end
+
+"""
+    getnumcomponents(r::ElemRestriction)
+
+Get the number of components in the elements of an [`ElemRestriction`](@ref).
+"""
+function getnumcomponents(r::ElemRestriction)
+    result = Ref{CeedInt}()
+    C.CeedElemRestrictionGetNumComponents(r[], result)
+    result[]
+end
+
+"""
+    getmultiplicity(r::ElemRestriction, v::AbstractCeedVector)
+
+Get the multiplicity of nodes in an [`ElemRestriction`](@ref). The
+[`CeedVector`](@ref) `v` should be a L-vector (i.e. `length(v) ==
+getlvectorsize(r)`).
+"""
+function getmultiplicity(r::ElemRestriction, v::AbstractCeedVector)
+    @assert length(v) == getlvectorsize(r)
+    C.CeedElemRestrictionGetMultiplicity(r[], v[])
+end
