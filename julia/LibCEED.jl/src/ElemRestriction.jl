@@ -126,6 +126,28 @@ function create_elem_restriction_strided(c::Ceed, nelem, elemsize, ncomp, lsize,
 end
 
 """
+    function apply!(
+        r::ElemRestriction,
+        u::CeedVector,
+        ru::CeedVector;
+        tmode=NOTRANSPOSE,
+        request=RequestImmediate(),
+    )
+
+Use the [`ElemRestriction`](@ref) to convert from L-vector to an E-vector (or apply the
+tranpose operation).
+"""
+function apply!(
+    r::ElemRestriction,
+    u::CeedVector,
+    ru::CeedVector;
+    tmode=NOTRANSPOSE,
+    request=RequestImmediate(),
+)
+    C.CeedElemRestrictionApply(r[], tmode, u[], ru[], request[])
+end
+
+"""
     create_evector(r::ElemRestriction)
 
 Return a new [`CeedVector`](@ref) E-vector.

@@ -293,6 +293,11 @@ end
         mult = ones(lsize)
         mult[n] = 2
         @test @witharray_read(a = lv, mult == a)
+        rand_lv = rand(lsize)
+        rand_ev = [rand_lv[1:n]; rand_lv[n:end]]
+        @witharray(a = lv, a .= rand_lv)
+        apply!(r, lv, ev)
+        @test @witharray_read(a = ev, a == rand_ev)
         @test showstr(r) == string(
             "CeedElemRestriction from (19, 1) to 2 elements ",
             "with 10 nodes each and component stride 19",
